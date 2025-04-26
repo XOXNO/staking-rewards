@@ -1,0 +1,559 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Data Visualization Guidelines
+
+## Core Principles
+
+- Visualizations should be clear, accurate, and informative
+- Charts should be responsive across all device sizes
+- Consistent styling should be applied to all visualizations
+- Interactive elements should enhance user understanding
+- Accessibility considerations should be incorporated
+- Loading and error states should be handled gracefully
+
+## Chart Types and Usage
+
+### Time Series Charts
+
+#### When to Use
+- Showing reward earnings over time
+- Displaying trends in staking performance
+- Comparing historical data across time periods
+
+#### Implementation Guidelines
+- Use line charts for continuous data
+- Use area charts to emphasize magnitude
+- Include clear X and Y axis labels
+- Provide appropriate time interval options (daily, weekly, monthly, etc.)
+- Use consistent date formatting
+- Mark significant events or changes
+
+```tsx
+<TimeSeriesChart
+  data={rewardsData}
+  title="Staking Rewards Over Time"
+  xAxisLabel="Date"
+  yAxisLabel="Rewards (ETH)"
+  timeframe="weekly"
+  onTimeframeChange={handleTimeframeChange}
+/>
+```
+
+### Bar/Column Charts
+
+#### When to Use
+- Comparing values across categories
+- Showing distribution across providers
+- Displaying discrete time period comparisons
+
+#### Implementation Guidelines
+- Use vertical bars (columns) for time-based data
+- Use horizontal bars for category comparisons
+- Maintain consistent color schemes
+- Sort data appropriately (alphabetical, numerical, etc.)
+- Include value labels for clarity
+- Avoid excessive categories (limit to 7-10 max)
+
+```tsx
+<BarChart
+  data={providerData}
+  title="Rewards by Provider"
+  xAxisLabel="Provider"
+  yAxisLabel="Total Rewards"
+  sortBy="value"
+  showValues={true}
+/>
+```
+
+### Pie/Donut Charts
+
+#### When to Use
+- Showing composition or proportion
+- Displaying provider breakdown
+- Illustrating part-to-whole relationships
+
+#### Implementation Guidelines
+- Limit to 6-7 segments maximum
+- Use distinct colors for each segment
+- Sort segments by size (largest to smallest)
+- Include percentage and absolute values
+- Add a legend for segment identification
+- Consider using a donut chart to allow for central metrics
+
+```tsx
+<DonutChart
+  data={providerPercentages}
+  title="Reward Distribution by Provider"
+  showLegend={true}
+  showValues={true}
+  centerContent={
+    <div>
+      <div>Total</div>
+      <div className="text-2xl font-bold">{totalAmount} ETH</div>
+    </div>
+  }
+/>
+```
+
+### Heatmaps
+
+#### When to Use
+- Showing reward intensity over time
+- Displaying patterns across two dimensions
+- Visualizing density of staking activity
+
+#### Implementation Guidelines
+- Use appropriate color scale for intensity
+- Provide clear color legend
+- Label both axes clearly
+- Allow zooming for detail examination
+- Include tooltips for specific data points
+
+```tsx
+<HeatmapChart
+  data={dailyRewardsData}
+  title="Daily Reward Activity"
+  xAxisLabel="Day of Week"
+  yAxisLabel="Month"
+  colorScale="sequential"
+  tooltipFormat="{value} ETH"
+/>
+```
+
+## Chart Components
+
+### Component Structure
+
+Each chart component should follow a consistent structure:
+
+```
+charts/
+├── BaseChart/             # Core chart functionality
+│   ├── BaseChart.tsx      # Base component with common features
+│   ├── BaseChart.type.ts  # Types and interfaces
+│   └── index.ts
+├── LineChart/             # Specific chart implementations
+├── BarChart/
+├── DonutChart/
+└── utils/                 # Shared chart utilities
+    ├── formatting.ts      # Data formatting helpers
+    ├── scales.ts          # Scale helpers
+    └── themes.ts          # Chart theming
+```
+
+### Base Chart Component
+
+All chart components should extend from a base component:
+
+```typescript
+interface IBaseChartProps {
+  /** The data to visualize */
+  data: unknown[];
+  
+  /** Chart title */
+  title?: string;
+  
+  /** Chart description for accessibility */
+  description?: string;
+  
+  /** Width of the chart (can be percentage or pixels) */
+  width?: string | number;
+  
+  /** Height of the chart (can be percentage or pixels) */
+  height?: string | number;
+  
+  /** Margin around the chart content */
+  margin?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  
+  /** Whether to show the chart legend */
+  showLegend?: boolean;
+  
+  /** Whether to show tooltips */
+  showTooltips?: boolean;
+  
+  /** Whether the chart is interactive */
+  interactive?: boolean;
+  
+  /** Callback for click events */
+  onClick?: (datum: unknown) => void;
+  
+  /** Custom theme override */
+  theme?: ChartTheme;
+}
+```
+
+## Data Formatting
+
+### Time Series Data
+
+Format time series data consistently:
+
+```typescript
+interface TimeSeriesDataPoint {
+  /** Date/time of the data point */
+  date: Date | number;
+  
+  /** Value at this point in time */
+  value: number;
+  
+  /** Optional category/series name */
+  series?: string;
+  
+  /** Any additional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+type TimeSeriesData = TimeSeriesDataPoint[];
+```
+
+### Categorical Data
+
+Format categorical data consistently:
+
+```typescript
+interface CategoryDataPoint {
+  /** Category name */
+  category: string;
+  
+  /** Value for this category */
+  value: number;
+  
+  /** Optional color override */
+  color?: string;
+  
+  /** Any additional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+type CategoryData = CategoryDataPoint[];
+```
+
+## Chart Styling
+
+### Color Palette
+
+Use a consistent color palette for visualizations:
+
+```typescript
+// src/lib/constants/chartColors.ts
+export const CHART_COLORS = {
+  // Primary color scale
+  primary: [
+    '#0ea5e9', // primary-500
+    '#0284c7', // primary-600
+    '#0369a1', // primary-700
+  ],
+  
+  // Categorical color palette (distinct colors)
+  categorical: [
+    '#0ea5e9', // blue
+    '#8b5cf6', // purple
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+  ],
+  
+  // Sequential color scale
+  sequential: [
+    '#f0f9ff', // blue-50
+    '#e0f2fe', // blue-100
+    '#bae6fd', // blue-200
+    '#7dd3fc', // blue-300
+    '#38bdf8', // blue-400
+    '#0ea5e9', // blue-500
+    '#0284c7', // blue-600
+    '#0369a1', // blue-700
+  ],
+  
+  // Diverging color scale
+  diverging: [
+    '#ef4444', // red-500
+    '#f97316', // orange-500
+    '#f59e0b', // amber-500
+    '#eab308', // yellow-500
+    '#84cc16', // lime-500
+    '#10b981', // green-500
+    '#06b6d4', // cyan-500
+  ]
+};
+```
+
+### Theme Configuration
+
+Create a consistent chart theme:
+
+```typescript
+// src/lib/constants/chartTheme.ts
+import { CHART_COLORS } from './chartColors';
+
+export const DEFAULT_CHART_THEME = {
+  // Base colors
+  colors: CHART_COLORS.categorical,
+  
+  // Typography
+  font: {
+    family: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    size: 12,
+    title: {
+      size: 16,
+      weight: 600,
+    },
+    axis: {
+      size: 12,
+      weight: 400,
+    },
+    legend: {
+      size: 12,
+      weight: 400,
+    },
+  },
+  
+  // Axes
+  axis: {
+    stroke: '#e5e7eb', // neutral-200
+    tickStroke: '#e5e7eb', // neutral-200
+    tickLength: 5,
+    labelOffset: 8,
+    grid: {
+      stroke: '#e5e7eb', // neutral-200
+      strokeDasharray: '4,4',
+    },
+  },
+  
+  // Tooltip
+  tooltip: {
+    background: '#ffffff',
+    border: '#e5e7eb',
+    borderRadius: 4,
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    padding: 8,
+  },
+  
+  // Legend
+  legend: {
+    padding: 16,
+    itemMargin: 8,
+    symbolSize: 12,
+  },
+  
+  // Animation
+  animation: {
+    duration: 300,
+  },
+};
+```
+
+## Responsiveness
+
+### Responsive Guidelines
+- Charts should adapt to container width
+- Use percentage-based dimensions when possible
+- Implement appropriate breakpoints for mobile optimization
+- Consider simplified visualizations on small screens
+- Maintain touch-friendly interaction areas
+
+```typescript
+// Example responsive chart implementation
+const LineChart: React.FC<ILineChartProps> = ({
+  data,
+  width = '100%',
+  height = 300,
+  ...props
+}) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  
+  useEffect(() => {
+    if (chartRef.current) {
+      const { width, height } = chartRef.current.getBoundingClientRect();
+      setDimensions({ width, height });
+    }
+    
+    const handleResize = () => {
+      if (chartRef.current) {
+        const { width, height } = chartRef.current.getBoundingClientRect();
+        setDimensions({ width, height });
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Chart implementation using dimensions
+  // ...
+};
+```
+
+## Interactivity
+
+### Interactive Features
+- Tooltips for data point details
+- Zoom and pan for time series
+- Highlight on hover
+- Click to select/filter
+- Toggle series visibility
+- Export options (PNG, CSV)
+
+```typescript
+<LineChart
+  data={rewardsData}
+  interactive={true}
+  showTooltips={true}
+  onPointClick={handlePointClick}
+  allowZoom={true}
+  exportOptions={['png', 'csv']}
+/>
+```
+
+## Accessibility
+
+### Accessibility Guidelines
+- Include proper ARIA labels and roles
+- Provide text alternatives for chart data
+- Ensure keyboard navigability
+- Use sufficient color contrast
+- Include screen reader descriptions
+- Offer data table alternatives
+
+```typescript
+<LineChart
+  data={rewardsData}
+  title="Staking Rewards Over Time"
+  description="Line chart showing ETH staking rewards from January to December 2023"
+  ariaLabel="Staking rewards chart"
+  showDataTable={false} // Toggle to true for accessible table view
+  dataTableCaption="Monthly staking rewards in ETH for 2023"
+/>
+```
+
+## Loading and Error States
+
+### Loading State
+```typescript
+<ChartContainer>
+  {isLoading ? (
+    <ChartLoading>
+      <Spinner size="lg" />
+      <span>Loading chart data...</span>
+    </ChartLoading>
+  ) : (
+    <LineChart data={data} {...props} />
+  )}
+</ChartContainer>
+```
+
+### Error State
+```typescript
+<ChartContainer>
+  {error ? (
+    <ChartError>
+      <AlertIcon />
+      <div>
+        <h4>Unable to load chart data</h4>
+        <p>{error.message}</p>
+        <Button onClick={retryLoad}>Retry</Button>
+      </div>
+    </ChartError>
+  ) : (
+    <LineChart data={data} {...props} />
+  )}
+</ChartContainer>
+```
+
+## No Data State
+```typescript
+<ChartContainer>
+  {data.length === 0 ? (
+    <NoDataState>
+      <NoDataIcon />
+      <p>No reward data available for the selected time period</p>
+      <Button onClick={adjustTimeRange}>View All Time</Button>
+    </NoDataState>
+  ) : (
+    <LineChart data={data} {...props} />
+  )}
+</ChartContainer>
+```
+
+## Performance Optimization
+
+### Performance Guidelines
+- Limit number of data points rendered
+- Implement data aggregation for large datasets
+- Use canvas-based rendering for large datasets
+- Optimize animations for performance
+- Implement virtualization for large datasets
+- Consider debouncing for interactive features
+
+```typescript
+// Example data aggregation utility
+function aggregateTimeSeriesData(
+  data: TimeSeriesData,
+  interval: 'day' | 'week' | 'month',
+  aggregationFn: (values: number[]) => number = calculateAverage
+): TimeSeriesData {
+  // Implementation details
+}
+
+// Usage
+const aggregatedData = useMemo(() => {
+  if (data.length > 100) {
+    return aggregateTimeSeriesData(data, 'week');
+  }
+  return data;
+}, [data]);
+```
+
+## Chart Libraries
+
+### Recommended Libraries
+- **Recharts**: React-based charting library with good performance
+- **D3.js**: Low-level visualization library for complex custom charts
+- **Visx**: Visualization components from Airbnb
+- **Chart.js**: Simple and flexible chart library
+- **Nivo**: Beautiful React charts with D3
+
+```typescript
+// Example using Recharts
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+
+const RewardsChart: React.FC<IRewardsChartProps> = ({ data, timeframe }) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" tickFormatter={formatDate} />
+        <YAxis tickFormatter={formatCurrency} />
+        <Tooltip content={<CustomTooltip />} />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke="#0ea5e9"
+          activeDot={{ r: 8 }}
+          strokeWidth={2}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+};

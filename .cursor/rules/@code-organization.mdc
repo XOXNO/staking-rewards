@@ -1,0 +1,299 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Code Organization Rules
+
+## Project Structure
+
+### Core Principles
+- Follow a modular architecture
+- Separate concerns between components, logic, and services
+- Use consistent naming conventions
+- Organize code by feature/domain
+- Minimize dependencies between modules
+
+### Root Directory Structure
+```
+staking-rewards/
+├── src/                       # Source code
+├── public/                    # Static assets
+├── tests/                     # Test files
+├── .next/                     # Next.js build output (auto-generated)
+├── node_modules/              # Dependencies (auto-generated)
+├── .eslintrc.js               # ESLint configuration
+├── .gitignore                 # Git ignore file
+├── next.config.js             # Next.js configuration
+├── package.json               # Project dependencies and scripts
+├── README.md                  # Project documentation
+├── tailwind.config.ts         # Tailwind CSS configuration
+└── tsconfig.json              # TypeScript configuration
+```
+
+### Source Directory Structure
+```
+src/
+├── app/                      # Next.js App Router pages
+│   ├── layout.tsx            # Root layout
+│   ├── page.tsx              # Home page
+│   ├── dashboard/            # Dashboard page
+│   └── [...]/                # Other pages
+├── components/               # Reusable UI components
+│   ├── ui/                   # Base UI components
+│   ├── dashboard/            # Dashboard-specific components
+│   └── charts/               # Visualization components
+├── api/                      # API services
+│   ├── providers/            # Staking provider implementations
+│   ├── services/             # Core services
+│   └── types/                # API-specific types
+├── lib/                      # Utilities and helpers
+│   ├── utils/                # General utility functions
+│   ├── hooks/                # Custom React hooks
+│   └── constants/            # Application constants
+├── types/                    # Global type definitions
+└── styles/                   # Global styles
+```
+
+## Module Organization
+
+### File Naming Conventions
+- Use kebab-case for file and directory names
+- Use PascalCase for component files
+- Use camelCase for utility and hook files
+- Add `.type.ts` suffix for type definition files
+- Add `.test.ts` or `.spec.ts` suffix for test files
+- Add `.module.css` suffix for CSS modules
+
+Examples:
+```
+components/
+├── ui/
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   ├── Button.test.tsx
+│   │   ├── Button.module.css
+│   │   └── index.ts
+│   └── Card/
+│       ├── Card.tsx
+│       ├── Card.test.tsx
+│       ├── Card.module.css
+│       └── index.ts
+```
+
+### Import Organization
+- Organize imports in a consistent order:
+  1. React and Next.js imports
+  2. Third-party library imports
+  3. Internal absolute imports (from paths aliased with @)
+  4. Internal relative imports
+  5. Type imports
+  6. Style imports
+- Use absolute imports for cross-module references
+- Use relative imports for intra-module references
+
+Example:
+```typescript
+// External dependencies
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import axios from 'axios';
+
+// Internal modules (absolute paths)
+import { useWallet } from '@/lib/hooks/use-wallet';
+import { formatAmount } from '@/lib/utils/formatters';
+
+// Internal modules (relative paths)
+import { StakingChart } from '../charts/StakingChart';
+import { RewardsList } from './RewardsList';
+
+// Types
+import type { StakingReward } from '@/types';
+
+// Styles
+import styles from './Dashboard.module.css';
+```
+
+## Component Organization
+
+### Component File Structure
+Each component should be organized in a dedicated directory:
+
+```
+ComponentName/
+├── ComponentName.tsx          # Main component implementation
+├── ComponentName.test.tsx     # Component tests
+├── ComponentName.module.css   # Component styles (if needed)
+├── ComponentName.type.ts      # Component-specific types (if needed)
+├── ComponentName.utils.ts     # Component-specific utilities (if needed)
+└── index.ts                   # Export file
+```
+
+### Component Internal Organization
+Organize component code in a consistent structure:
+
+1. Import statements
+2. Type definitions
+3. Constants
+4. Helper functions
+5. Component definition
+6. Default export
+
+Example:
+```typescript
+// Imports
+import { useState, useCallback } from 'react';
+import { formatCurrency } from '@/lib/utils/formatters';
+
+// Types
+interface IRewardCardProps {
+  amount: number;
+  token: string;
+  provider: string;
+  timestamp: number;
+  onClick?: (id: string) => void;
+}
+
+// Constants
+const DATE_FORMAT_OPTIONS = { year: 'numeric', month: 'short', day: 'numeric' };
+
+// Helper functions
+const formatDate = (timestamp: number): string => {
+  return new Date(timestamp).toLocaleDateString('en-US', DATE_FORMAT_OPTIONS);
+};
+
+// Component
+export const RewardCard: React.FC<IRewardCardProps> = ({
+  amount,
+  token,
+  provider,
+  timestamp,
+  onClick,
+}) => {
+  // Component implementation
+};
+
+// Default export
+export default RewardCard;
+```
+
+## Code Modularity
+
+### Module Independence
+- Each module should have a single responsibility
+- Minimize dependencies between modules
+- Provide a clear public API for each module
+- Hide implementation details when possible
+
+### Barrel Files (index.ts)
+Use barrel files to simplify imports:
+
+```typescript
+// components/ui/index.ts
+export * from './Button';
+export * from './Card';
+export * from './Input';
+```
+
+### Hooks Organization
+- Place reusable hooks in `src/lib/hooks/`
+- Name hooks with `use` prefix
+- Each hook should have its own file
+- Document hook parameters, return values, and side effects
+
+## State Management
+
+### State Organization
+- Use React Context for global state that spans multiple components
+- Keep state close to where it's used
+- Separate UI state from domain state
+- Use custom hooks to encapsulate complex state logic
+
+### Context Structure
+```
+src/lib/context/
+├── StakingContext/
+│   ├── StakingContext.tsx       # Context provider
+│   ├── StakingContext.type.ts   # Context types
+│   ├── StakingContext.utils.ts  # Context utilities
+│   └── index.ts                 # Exports
+├── ThemeContext/
+└── WalletContext/
+```
+
+## API Module Organization
+
+### Service Organization
+- Group services by domain/feature
+- Create a base service class/interface for common functionality
+- Use dependency injection for service dependencies
+- Export service interfaces along with implementations
+
+Example:
+```
+src/api/
+├── providers/
+│   ├── ethereum/
+│   │   ├── ethereumService.ts
+│   │   ├── ethereumService.test.ts
+│   │   └── index.ts
+│   └── solana/
+│       ├── solanaService.ts
+│       ├── solanaService.test.ts
+│       └── index.ts
+├── services/
+│   ├── stakingService.ts
+│   ├── httpClient.ts
+│   └── cacheService.ts
+└── index.ts
+```
+
+## Documentation
+
+### Code Comments
+- Use JSDoc comments for functions, classes, and interfaces
+- Add inline comments for complex logic
+- Keep comments up-to-date with code changes
+- Focus on explaining "why" rather than "what"
+
+### File Headers
+Each file should include a header comment:
+
+```typescript
+/**
+ * @file StakingService.ts
+ * @description Service for fetching and processing staking rewards from various providers.
+ * @module api/services
+ */
+```
+
+## Testing Organization
+
+### Test Structure
+- Co-locate tests with the code they test
+- Use descriptive test names that explain the expected behavior
+- Group tests logically with describe blocks
+- Follow AAA pattern (Arrange, Act, Assert)
+
+Example:
+```typescript
+describe('StakingService', () => {
+  describe('getStakingHistory', () => {
+    it('should return staking history for valid address', async () => {
+      // Arrange
+      const service = new StakingService();
+      const address = '0x123...';
+      
+      // Act
+      const result = await service.getStakingHistory(address);
+      
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.rewards).toHaveLength(5);
+    });
+    
+    it('should throw error for invalid address', async () => {
+      // Test implementation
+    });
+  });
+});

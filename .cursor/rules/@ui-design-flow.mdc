@@ -1,0 +1,152 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# UI Design Flow
+
+## Component Structure
+
+### Core Principles
+- Use atomic design methodology (atoms, molecules, organisms, templates, pages)
+- Each component should have a single responsibility
+- Components should be reusable across the application
+- Components should be composable to build complex UIs
+
+### File Structure
+- Place all UI components in the `src/components` directory
+- Group components by domain (`ui`, `dashboard`, `charts`)
+- Each component should have its own folder with the component name
+- Include an `index.ts` file to export the component
+
+Example:
+```
+src/components/
+├── ui/
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   ├── Button.test.tsx
+│   │   └── index.ts
+│   ├── Card/
+│   └── Input/
+├── dashboard/
+│   ├── StatsCard/
+│   ├── WalletInput/
+│   └── RewardsList/
+└── charts/
+    ├── RewardsChart/
+    ├── ProviderBreakdown/
+    └── TimelineChart/
+```
+
+### Component Creation Rules
+1. All components must use TypeScript with proper prop typing
+2. Use named exports for all components
+3. Include JSDoc comments for component description and props
+4. Use functional components with hooks
+5. Keep components focused on presentation when possible, separating logic
+6. Use composition over inheritance
+
+## Theming
+
+### Tailwind Configuration
+- Create a comprehensive theme in `tailwind.config.ts`
+- Define a consistent color palette with semantic naming
+- Set up spacing, typography, and border radius scales
+- Create component-specific extensions when needed
+
+### Color System
+- Use a primary color for main actions and branding
+- Use a secondary color for complementary UI elements
+- Include neutral colors for text, backgrounds, and borders
+- Define semantic colors for success, warning, error, and info states
+- Ensure all colors meet WCAG AA accessibility standards
+
+```js
+// Example colors in tailwind.config.ts
+colors: {
+  primary: {
+    50: '#f0f9ff',
+    100: '#e0f2fe',
+    500: '#0ea5e9',
+    600: '#0284c7',
+    700: '#0369a1',
+  },
+  secondary: {
+    50: '#f5f3ff',
+    100: '#ede9fe',
+    500: '#8b5cf6',
+    600: '#7c3aed',
+    700: '#6d28d9',
+  },
+  neutral: {
+    50: '#f9fafb',
+    100: '#f3f4f6',
+    200: '#e5e7eb',
+    700: '#374151',
+    800: '#1f2937',
+    900: '#111827',
+  },
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  info: '#3b82f6',
+}
+```
+
+### Typography
+- Define consistent font sizes, weights, and line heights
+- Use relative units (rem) for font sizes
+- Create text styles for headings, body text, and UI elements
+- Ensure text remains readable at all screen sizes
+
+### Spacing
+- Use consistent spacing across the application
+- Create a scale that follows a logical progression
+- Use the spacing scale for margins, paddings, and gaps
+
+### Responsive Design
+- Build all components with mobile-first approach
+- Define standard breakpoints for responsive adaptations
+- Test designs on multiple device sizes
+- Ensure critical actions remain accessible on small screens
+
+## Component Design Guidelines
+
+### Layout Components
+- Create flexible layout components (Grid, Flex, Container)
+- Support different responsive behaviors
+- Allow for content-based sizing
+- Include appropriate spacing between elements
+
+### Form Elements
+- Standardize input styling and behavior
+- Include proper validation states
+- Ensure accessible labels and error messages
+- Support keyboard navigation
+
+### Data Visualization
+- Use consistent chart styles and colors
+- Provide legends and tooltips for clarity
+- Ensure charts are accessible with alternative text
+- Support responsive resizing of visualizations
+- Include loading and empty states
+
+### Interactive Elements
+- Design clear focus and hover states
+- Ensure sufficient touch targets for mobile
+- Provide visual feedback for actions
+- Maintain consistency in interactive patterns
+
+## Animation and Transitions
+- Use subtle animations to enhance UX
+- Keep transitions short (150-300ms)
+- Avoid animations that could cause motion sickness
+- Respect user preferences for reduced motion
+
+## Accessibility
+- Maintain sufficient color contrast (WCAG AA minimum)
+- Ensure keyboard navigability
+- Support screen readers with proper ARIA attributes
+- Test with accessibility tools regularly
+- Design for different user needs

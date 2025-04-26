@@ -1,0 +1,496 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Testing Strategy
+
+## Testing Principles
+
+- Tests should verify functionality, not implementation details
+- Tests should be easy to write and maintain
+- Each component and utility should have appropriate tests
+- Automated testing should be integrated into the development workflow
+- Test coverage should focus on critical functionality
+- Tests should detect regressions
+
+## Testing Levels
+
+### Unit Testing
+
+#### What to Test
+- Individual utility functions
+- Helper methods
+- Custom hooks
+- Small components
+- Data processing functions
+
+#### Testing Rules
+1. Test each function in isolation
+2. Use mocks for dependencies
+3. Test edge cases and error conditions
+4. Focus on behavior, not implementation
+5. Keep tests fast and independent
+
+```typescript
+// Example utility function test
+describe('formatCurrency', () => {
+  it('should format positive numbers with correct currency symbol', () => {
+    expect(formatCurrency(1234.56, 'USD')).toBe('$1,234.56');
+    expect(formatCurrency(1234.56, 'EUR')).toBe('€1,234.56');
+  });
+
+  it('should handle zero values correctly', () => {
+    expect(formatCurrency(0, 'USD')).toBe('$0.00');
+  });
+
+  it('should handle negative values correctly', () => {
+    expect(formatCurrency(-1234.56, 'USD')).toBe('-$1,234.56');
+  });
+
+  it('should use default currency when not specified', () => {
+    expect(formatCurrency(1234.56)).toBe('$1,234.56');
+  });
+});
+```
+
+### Component Testing
+
+#### What to Test
+- Component rendering
+- User interactions
+- State changes
+- Conditional rendering
+- Proper prop handling
+
+#### Testing Rules
+1. Render components in isolation
+2. Mock external dependencies and context
+3. Test user interactions (click, input, etc.)
+4. Verify component state and output
+5. Test component variations with different props
+
+```typescript
+// Example component test
+import { render, screen, fireEvent } from '@testing-library/react';
+import { WalletInput } from './WalletInput';
+
+describe('WalletInput', () => {
+  const mockOnSubmit = jest.fn();
+
+  beforeEach(() => {
+    mockOnSubmit.mockClear();
+  });
+
+  it('should render the input field', () => {
+    render(<WalletInput onSubmit={mockOnSubmit} />);
+    expect(screen.getByPlaceholderText('Enter wallet address')).toBeInTheDocument();
+  });
+
+  it('should disable submit button when input is empty', () => {
+    render(<WalletInput onSubmit={mockOnSubmit} />);
+    const button = screen.getByRole('button', { name: /search/i });
+    expect(button).toBeDisabled();
+  });
+
+  it('should enable submit button when input has value', () => {
+    render(<WalletInput onSubmit={mockOnSubmit} />);
+    const input = screen.getByPlaceholderText('Enter wallet address');
+    fireEvent.change(input, { target: { value: '0x1234...' } });
+    const button = screen.getByRole('button', { name: /search/i });
+    expect(button).toBeEnabled();
+  });
+
+  it('should call onSubmit with wallet address when submitted', () => {
+    render(<WalletInput onSubmit={mockOnSubmit} />);
+    const input = screen.getByPlaceholderText('Enter wallet address');
+    const button = screen.getByRole('button', { name: /search/i });
+    
+    fireEvent.change(input, { target: { value: '0x1234...' } });
+    fireEvent.click(button);
+    
+    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).toHaveBeenCalledWith('0x1234...');
+  });
+});
+```
+
+### Integration Testing
+
+#### What to Test
+- Interaction between components
+- API service integration
+- Data flow through multiple components
+- State management across components
+
+#### Testing Rules
+1. Test related components together
+2. Mock external API calls
+3. Verify data flows correctly between components
+4. Test component combinations that form features
+
+```typescript
+// Example integration test
+describe('Dashboard Integration', () => {
+  const mockStakingData = {
+    // Test data
+  };
+
+  beforeEach(() => {
+    // Mock API response
+    jest.spyOn(StakingService.prototype, 'getStakingHistory')
+      .mockResolvedValue(mockStakingData);
+  });
+
+  it('should load and display staking data when wallet address is submitted', async () => {
+    render(<Dashboard />);
+    
+    // Enter wallet address
+    const input = screen.getByPlaceholderText('Enter wallet address');
+    const button = screen.getByRole('button', { name: /search/i });
+    
+    fireEvent.change(input, { target: { value: '0x1234...' } });
+    fireEvent.click(button);
+    
+    // Check loading state
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    
+    // Wait for data to load
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    });
+    
+    // Verify that data is displayed correctly
+    expect(screen.getByText('Total Rewards')).toBeInTheDocument();
+    expect(screen.getByText('5.432 ETH')).toBeInTheDocument();
+  });
+});
+```
+
+### API Service Testing
+
+#### What to Test
+- API service methods
+- Request formatting
+- Response handling
+- Error handling
+- Caching behavior
+
+#### Testing Rules
+1. Mock external API endpoints
+2. Test request formation
+3. Test successful response handling
+4. Test error handling
+5. Verify cache operations
+
+```typescript
+// Example API service test
+describe('EthereumStakingService', () => {
+  let service: EthereumStakingService;
+  let mockHttp: jest.Mocked<HttpClient>;
+  
+  beforeEach(() => {
+    mockHttp = {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn()
+    } as any;
+    
+    service = new EthereumStakingService(mockHttp);
+  });
+  
+  describe('getStakingHistory', () => {
+    const validAddress = '0x1234...';
+    const mockResponse = {
+      // Mock API response data
+    };
+    
+    it('should call the correct API endpoint', async () => {
+      mockHttp.get.mockResolvedValue({ data: mockResponse, status: 200 });
+      
+      await service.getStakingHistory(validAddress);
+      
+      expect(mockHttp.get).toHaveBeenCalledWith(
+        expect.stringContaining(`/rewards/${validAddress}`),
+        expect.any(Object)
+      );
+    });
+    
+    it('should transform API response to common format', async () => {
+      mockHttp.get.mockResolvedValue({ data: mockResponse, status: 200 });
+      
+      const result = await service.getStakingHistory(validAddress);
+      
+      expect(result).toEqual({
+        address: validAddress,
+        rewards: expect.any(Array),
+        stats: expect.any(Object),
+        lastUpdated: expect.any(Number)
+      });
+    });
+    
+    it('should handle API errors correctly', async () => {
+      mockHttp.get.mockRejectedValue(new Error('Network error'));
+      
+      await expect(service.getStakingHistory(validAddress))
+        .rejects
+        .toThrow('Network error');
+    });
+  });
+});
+```
+
+## Testing Tools and Setup
+
+### Recommended Tools
+- **Jest**: Core testing framework
+- **Testing Library**: Component testing utilities
+- **MSW (Mock Service Worker)**: API mocking
+- **Jest-dom**: Custom DOM matchers
+- **User-event**: Simulating user interactions
+
+### Jest Configuration
+```javascript
+// jest.config.js
+module.exports = {
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }]
+  },
+  moduleNameMapper: {
+    '^@/components/(.*)$': '<rootDir>/src/components/$1',
+    '^@/api/(.*)$': '<rootDir>/src/api/$1',
+    '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+    '^@/types$': '<rootDir>/src/types',
+    '^@/styles/(.*)$': '<rootDir>/src/styles/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/*.stories.{ts,tsx}',
+    '!src/**/*.test.{ts,tsx}',
+    '!src/**/_*.{ts,tsx}'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  }
+};
+```
+
+## Test Organization
+
+### File Structure
+Place test files alongside the code they test:
+
+```
+src/
+├── components/
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   ├── Button.test.tsx
+│   │   └── index.ts
+│   └── ...
+├── lib/
+│   ├── utils/
+│   │   ├── formatters.ts
+│   │   ├── formatters.test.ts
+│   │   └── ...
+│   └── ...
+└── ...
+```
+
+### Test Naming
+- Name test files with `.test.ts` or `.test.tsx` suffix
+- Use descriptive test suite and test case names
+- Follow a consistent naming pattern
+
+```typescript
+// Bad
+test('it works', () => { ... });
+
+// Good
+test('should format currency with correct decimal places and symbol', () => { ... });
+```
+
+## Mock Strategy
+
+### API Mocking
+Use MSW (Mock Service Worker) to intercept and mock API requests:
+
+```typescript
+// src/mocks/handlers.ts
+import { rest } from 'msw';
+
+export const handlers = [
+  rest.get('/api/rewards/:address', (req, res, ctx) => {
+    const { address } = req.params;
+    
+    return res(
+      ctx.status(200),
+      ctx.json({
+        // Mock response data
+      })
+    );
+  }),
+  
+  rest.get('/api/providers', (req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json([
+        // List of providers
+      ])
+    );
+  })
+];
+```
+
+### Component Mocking
+Mock child components in parent component tests:
+
+```typescript
+// Mock child component
+jest.mock('@/components/charts/RewardsChart', () => ({
+  RewardsChart: ({ data }) => <div data-testid="mocked-chart" data-chart-data={JSON.stringify(data)} />
+}));
+```
+
+## Test-Driven Development
+
+### TDD Process
+1. Write failing test(s) for the feature/functionality
+2. Implement the minimum code needed to pass the test(s)
+3. Refactor code while ensuring tests still pass
+4. Repeat for next feature/functionality
+
+### When to Apply TDD
+- For critical business logic
+- For complex algorithms
+- For data transformation functions
+- For edge cases and error handling
+
+## E2E Testing
+
+### Recommended Setup
+Use Cypress for end-to-end testing:
+
+```javascript
+// cypress/integration/dashboard.spec.js
+describe('Dashboard', () => {
+  beforeEach(() => {
+    // Set up API mocks
+    cy.intercept('GET', '/api/rewards/*', { fixture: 'rewards.json' }).as('getRewards');
+    cy.visit('/');
+  });
+  
+  it('should allow user to enter wallet address and view rewards dashboard', () => {
+    // Enter wallet address
+    cy.findByPlaceholderText('Enter wallet address').type('0x1234...');
+    cy.findByRole('button', { name: /search/i }).click();
+    
+    // Wait for API response
+    cy.wait('@getRewards');
+    
+    // Verify dashboard elements
+    cy.findByText('Total Rewards').should('be.visible');
+    cy.findByText('5.432 ETH').should('be.visible');
+    
+    // Check chart is rendered
+    cy.get('[data-testid="rewards-chart"]').should('be.visible');
+    
+    // Check time period selector works
+    cy.findByRole('button', { name: /monthly/i }).click();
+    cy.findByText('0.432 ETH / month').should('be.visible');
+  });
+});
+```
+
+## Continuous Integration
+
+### CI Configuration
+Set up GitHub Actions workflow for automated testing:
+
+```yaml
+# .github/workflows/test.yml
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run lint
+      run: npm run lint
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+```
+
+## Performance Testing
+
+### Component Performance
+Test component rendering performance:
+
+```typescript
+import { render } from '@testing-library/react';
+import { RewardsList } from './RewardsList';
+
+describe('RewardsList Performance', () => {
+  it('should render large lists efficiently', () => {
+    // Generate large test dataset
+    const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
+      id: `reward-${i}`,
+      amount: Math.random() * 10,
+      token: 'ETH',
+      provider: 'Provider',
+      timestamp: Date.now() - (i * 86400000)
+    }));
+    
+    // Measure render time
+    const start = performance.now();
+    const { rerender } = render(<RewardsList rewards={largeDataset} />);
+    const initialRenderTime = performance.now() - start;
+    
+    // Measure rerender time
+    const reStart = performance.now();
+    rerender(<RewardsList rewards={largeDataset} />);
+    const reRenderTime = performance.now() - reStart;
+    
+    // Log performance metrics
+    console.log(`Initial render: ${initialRenderTime}ms`);
+    console.log(`Re-render: ${reRenderTime}ms`);
+    
+    // Assert performance expectations
+    expect(initialRenderTime).toBeLessThan(100);
+    expect(reRenderTime).toBeLessThan(50);
+  });
+});
+```

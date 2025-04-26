@@ -1,0 +1,160 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# API Integration Rules
+
+## Architecture
+
+### Core Principles
+- Isolate API logic in dedicated service modules
+- Create abstractions for each staking provider
+- Implement consistent error handling
+- Support caching for performance optimization
+- Use TypeScript for type safety
+
+### File Structure
+```
+src/api/
+├── providers/                # Provider-specific implementations
+│   ├── ethereum/
+│   ├── solana/
+│   └── cosmos/
+├── services/                 # Core API services
+│   ├── StakingService.ts     # Aggregates all providers
+│   ├── CacheService.ts       # Handles caching
+│   └── HttpClient.ts         # Base HTTP client
+├── types/                    # API-specific type definitions
+│   ├── api.ts                # Core API types
+│   └── responses.ts          # Provider response types
+└── utils/                    # API-specific utilities
+    ├── formatters.ts         # Response formatters
+    └── validators.ts         # Input validators
+```
+
+## Provider Implementation
+
+### Base Interface
+All provider implementations must follow the base `StakingProviderService` interface:
+
+```typescript
+interface StakingProviderService {
+  getStakingHistory(address: string): Promise<StakingHistoryResponse>;
+  readonly providerId: string;
+  readonly providerName: string;
+}
+```
+
+### Provider Service Rules
+1. Each provider must be isolated in its own module
+2. Provider services should handle their own authentication
+3. Include rate limiting considerations
+4. Implement proper error handling and typing
+5. Add detailed JSDoc documentation
+6. Include unit tests for each provider
+
+## Error Handling
+
+### Error Structure
+```typescript
+type ApiError = {
+  code: string;        // Machine-readable error code
+  message: string;     // Human-readable error message
+  details?: unknown;   // Additional error context
+};
+```
+
+### Error Handling Rules
+1. Use consistent error codes across all providers
+2. Include informative error messages
+3. Log detailed error information for debugging
+4. Handle network failures gracefully
+5. Implement retries for transient failures
+6. Return typed error responses
+
+## Caching Strategy
+
+### Cache Implementation
+- Use memory cache for short-lived data
+- Consider persistent cache for stable data
+- Implement cache invalidation policies
+- Allow cache bypass for fresh data requests
+
+### Caching Rules
+1. Cache responses based on wallet address and time range
+2. Set appropriate TTL (Time To Live) for cached data
+3. Implement cache invalidation on relevant events
+4. Include cache status in responses
+5. Allow forced refresh to bypass cache
+
+## Request/Response Flow
+
+### Request Flow
+1. Validate input parameters
+2. Check cache for existing data
+3. Format and sanitize parameters
+4. Make API request to provider
+5. Handle errors and retry if appropriate
+6. Process and format response
+7. Cache successful responses
+8. Return typed response to caller
+
+### Response Processing
+1. Normalize data format across providers
+2. Validate response structure
+3. Transform provider-specific data to common format
+4. Calculate aggregate statistics
+5. Format timestamps consistently
+6. Sort data chronologically
+
+## Aggregation Service
+
+### Core Functionality
+- Fetch data from multiple provider services
+- Merge results into unified response
+- Calculate cross-provider statistics
+- Handle partial failures gracefully
+- Support parallel requests to providers
+
+### Aggregation Rules
+1. Implement concurrent requests when possible
+2. Handle timeouts for slow providers
+3. Continue processing even if some providers fail
+4. Include provider status in response
+5. Prioritize critical providers
+
+## Rate Limiting
+
+### Implementation Strategy
+- Respect provider rate limits
+- Implement client-side throttling
+- Queue requests when approaching limits
+- Add backoff for rate limit errors
+
+### Rate Limiting Rules
+1. Track request counts by provider
+2. Implement exponential backoff for retries
+3. Queue non-urgent requests
+4. Cancel redundant requests
+5. Provide feedback on rate limit status
+
+## Security Considerations
+
+### Security Rules
+1. Never expose API keys in client-side code
+2. Validate input addresses before API calls
+3. Use HTTPS for all external requests
+4. Implement timeouts for all requests
+5. Sanitize provider responses to prevent XSS
+6. Consider using API proxies for sensitive endpoints
+
+## Documentation
+
+### API Documentation Requirements
+1. Document each provider's endpoints and parameters
+2. Include example requests and responses
+3. Document error codes and their meanings
+4. Add rate limit information
+5. Describe authentication requirements
+6. Document caching behavior

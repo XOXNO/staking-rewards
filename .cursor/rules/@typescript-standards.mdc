@@ -1,0 +1,293 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# TypeScript Standards
+
+## Core Principles
+
+- Use TypeScript for all code in the project
+- Enforce strict type checking
+- Avoid using `any` type
+- Create comprehensive type definitions for all data structures
+- Follow consistent naming conventions
+- Utilize TypeScript's advanced features appropriately
+
+## Configuration
+
+### TypeScript Configuration
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
+```
+
+### ESLint Configuration
+Enforce TypeScript best practices with ESLint:
+
+```js
+// eslint config
+{
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "rules": {
+    "@typescript-eslint/explicit-function-return-type": "error",
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": "interface",
+        "format": ["PascalCase"],
+        "prefix": ["I"]
+      },
+      {
+        "selector": "typeAlias",
+        "format": ["PascalCase"]
+      },
+      {
+        "selector": "enum",
+        "format": ["PascalCase"]
+      }
+    ]
+  }
+}
+```
+
+## Type Definition Guidelines
+
+### File Organization
+- Place shared types in dedicated type files
+- Organize types by domain or feature
+- Export types from a central `index.ts` file when appropriate
+- Co-locate component props with their components
+
+### Type Naming Conventions
+- Interfaces: PascalCase with `I` prefix (e.g., `IUserProfile`)
+- Type aliases: PascalCase (e.g., `UserProfile`)
+- Enums: PascalCase (e.g., `UserRole`)
+- Generic type parameters: Single uppercase letter or PascalCase (e.g., `T` or `TKey`)
+
+### Common Types
+Define and reuse common types across the application:
+
+```typescript
+// Common result type
+type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E };
+
+// Nullable type
+type Nullable<T> = T | null;
+
+// Record with specific keys
+type StakingProviders = Record<StakingProviderId, StakingProvider>;
+```
+
+## Type Safety Rules
+
+### General Rules
+1. Always specify return types for functions
+2. Use union types instead of enums when appropriate
+3. Specify generic constraints when needed
+4. Use type guards for runtime type checking
+5. Avoid type assertions (`as`) when possible
+6. Use unknown instead of any for values of uncertain type
+7. Utilize readonly for immutable data
+
+### React Component Types
+```typescript
+// Prop types should be defined with an interface
+interface IButtonProps {
+  variant: 'primary' | 'secondary' | 'tertiary';
+  size?: 'small' | 'medium' | 'large';
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+// Use React.FC with explicit prop interface
+const Button: React.FC<IButtonProps> = ({
+  variant,
+  size = 'medium',
+  label,
+  onClick,
+  disabled = false,
+  className,
+}) => {
+  // Component implementation
+};
+```
+
+### API Type Definitions
+1. Define request and response types for all API calls
+2. Use discriminated unions for different response types
+3. Define error types explicitly
+4. Use Pick, Omit, and Partial to derive related types
+5. Document types with JSDoc comments
+
+```typescript
+/** Represents a staking reward entry from the API */
+interface IStakingReward {
+  /** Unique identifier for the reward */
+  id: string;
+  /** Provider that issued the reward */
+  provider: string;
+  /** Amount of the reward in the native token */
+  amount: number;
+  /** Token symbol */
+  token: string;
+  /** Timestamp when the reward was issued (UNIX timestamp) */
+  timestamp: number;
+  /** Transaction hash (optional) */
+  transactionHash?: string;
+}
+```
+
+## Type Utilities
+
+### Custom Type Utilities
+Create and use custom type utilities for common patterns:
+
+```typescript
+// Makes specific properties of T required
+type RequiredProps<T, K extends keyof T> = T & {
+  [P in K]-?: T[P];
+};
+
+// Deep partial type
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+// Deep readonly type
+type DeepReadonly<T> = {
+  readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
+};
+```
+
+### Standard Type Utilities
+Properly utilize TypeScript's built-in utility types:
+
+1. `Partial<T>` - Makes all properties optional
+2. `Required<T>` - Makes all properties required
+3. `Readonly<T>` - Makes all properties readonly
+4. `Pick<T, K>` - Select a subset of properties
+5. `Omit<T, K>` - Remove a subset of properties
+6. `Record<K, T>` - Create a type with properties of type K and values of type T
+
+## Type Guards
+
+### Custom Type Guards
+Implement type guards to narrow types at runtime:
+
+```typescript
+// Type guard to check if value is a StakingReward
+function isStakingReward(value: unknown): value is StakingReward {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'provider' in value &&
+    'amount' in value &&
+    'timestamp' in value
+  );
+}
+
+// Using the type guard
+function processReward(data: unknown): void {
+  if (isStakingReward(data)) {
+    // TypeScript knows data is StakingReward here
+    console.log(data.amount);
+  }
+}
+```
+
+## Error Handling With Types
+
+### Error Types
+Use discriminated unions for error handling:
+
+```typescript
+// Define specific error types
+type NetworkError = {
+  kind: 'network';
+  status: number;
+  message: string;
+};
+
+type ValidationError = {
+  kind: 'validation';
+  field: string;
+  message: string;
+};
+
+type AuthError = {
+  kind: 'auth';
+  message: string;
+};
+
+// Union type of all possible errors
+type AppError = NetworkError | ValidationError | AuthError;
+
+// Function that returns a Result type
+async function fetchData(): Promise<Result<Data, AppError>> {
+  try {
+    // Implementation
+    return { success: true, data };
+  } catch (error) {
+    // Handle and transform error
+    return { success: false, error: transformError(error) };
+  }
+}
+```
+
+## Documentation
+
+### JSDoc Comments
+All types should include JSDoc comments:
+
+1. Each type/interface should have a description
+2. All properties should be documented
+3. Include examples where helpful
+4. Document constraints and valid values
+5. Cross-reference related types
+
+### Examples
+Include example usage in JSDoc comments:
+
+```typescript
+/**
+ * Represents configuration options for a staking provider.
+ * 
+ * @example
+ * ```typescript
+ * const config: ProviderConfig = {
+ *   apiUrl: 'https://api.example.com',
+ *   apiKey: 'your-api-key',
+ *   timeout: 5000
+ * };
+ * ```
+ */
+interface IProviderConfig {
+  /** Base URL for the provider's API */
+  apiUrl: string;
+  /** API key for authentication */
+  apiKey: string;
+  /** Request timeout in milliseconds (default: 3000) */
+  timeout?: number;
+}

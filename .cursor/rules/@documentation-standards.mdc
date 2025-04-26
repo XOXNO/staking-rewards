@@ -1,0 +1,355 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Documentation Standards
+
+## General Documentation Principles
+
+- Documentation should be comprehensive, clear, and consistent
+- Code should be self-documenting where possible
+- Documentation should be maintained alongside code changes
+- Prioritize explaining "why" over "what" when the "what" is obvious
+- Use clear, concise language free of jargon when possible
+
+## JSDoc Comments
+
+### JSDoc Rules
+
+1. All public functions, classes, interfaces, and types must have JSDoc comments
+2. Document parameters, return values, and thrown exceptions
+3. Include examples for complex or commonly used functions
+4. Add `@link` references to related functions or types
+5. Group related tags together (e.g., all `@param` tags)
+6. Use markdown formatting in descriptions for readability
+
+### Function Documentation
+```typescript
+/**
+ * Fetches staking rewards for a wallet address across all supported providers.
+ * 
+ * This function aggregates data from multiple providers and normalizes
+ * the response format to provide a unified view of staking rewards.
+ * 
+ * @param address - The wallet address to fetch rewards for
+ * @param options - Optional configuration for the request
+ * @param options.startDate - The start date for filtering rewards (default: 30 days ago)
+ * @param options.endDate - The end date for filtering rewards (default: current date)
+ * @param options.includeStats - Whether to include statistical aggregations (default: true)
+ * 
+ * @returns A promise that resolves to the staking history response
+ * 
+ * @throws {ValidationError} If the address format is invalid
+ * @throws {NetworkError} If there's an issue communicating with provider APIs
+ * 
+ * @example
+ * ```typescript
+ * const history = await fetchStakingHistory('0x1234...', {
+ *   startDate: new Date('2023-01-01'),
+ *   includeStats: true
+ * });
+ * console.log(`Total rewards: ${history.stats.totalRewards}`);
+ * ```
+ */
+async function fetchStakingHistory(
+  address: string,
+  options?: FetchOptions
+): Promise<StakingHistoryResponse> {
+  // Implementation
+}
+```
+
+### Interface Documentation
+```typescript
+/**
+ * Configuration options for a staking provider service.
+ * 
+ * @interface IProviderConfig
+ */
+interface IProviderConfig {
+  /**
+   * The base URL for the provider's API
+   * 
+   * @example 'https://api.ethereum.org/v1'
+   */
+  baseUrl: string;
+  
+  /**
+   * API key for authentication with the provider
+   * 
+   * This should be stored securely and not exposed in client-side code.
+   */
+  apiKey: string;
+  
+  /**
+   * Request timeout in milliseconds
+   * 
+   * @default 5000
+   */
+  timeout?: number;
+}
+```
+
+### Component Documentation
+```typescript
+/**
+ * Displays a card with staking reward information.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <RewardCard
+ *   amount={100}
+ *   token="ETH"
+ *   provider="Lido"
+ *   timestamp={1650000000}
+ * />
+ * ```
+ */
+interface IRewardCardProps {
+  /** The reward amount in the token's smallest unit */
+  amount: number;
+  
+  /** Token symbol */
+  token: string;
+  
+  /** Provider that issued the reward */
+  provider: string;
+  
+  /** Unix timestamp when the reward was issued */
+  timestamp: number;
+  
+  /** Callback when the card is clicked */
+  onClick?: (id: string) => void;
+}
+```
+
+## File Headers
+
+### Header Template
+Each file should include a header comment that describes its purpose and contents:
+
+```typescript
+/**
+ * @file StakingService.ts
+ * @description Service for fetching and processing staking rewards from various providers.
+ * @module api/services
+ */
+```
+
+### Recommended Tags
+- `@file` - The filename
+- `@description` - Brief description of the file's purpose
+- `@module` - The module this file belongs to
+- `@author` - File author (optional)
+- `@version` - Version information (optional)
+- `@see` - References to related files or documentation
+
+## README Documentation
+
+### Project README
+The main README.md should include:
+
+1. Project overview and purpose
+2. Quick start guide
+3. Development setup instructions
+4. Architecture overview
+5. Key technologies and libraries
+6. Testing approach
+7. Deployment information
+8. Contribution guidelines
+
+### Component README
+Complex components should have their own README.md:
+
+```markdown
+# Chart Component
+
+A flexible charting component for visualizing staking rewards data.
+
+## Usage
+
+```tsx
+import { Chart } from '@/components/charts/Chart';
+
+<Chart 
+  data={rewardsData}
+  type="line"
+  timeframe="weekly"
+/>
+```
+
+## Props
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| data | `ChartData` | required | The data to visualize |
+| type | `'line' \| 'bar' \| 'pie'` | `'line'` | Chart type |
+| timeframe | `TimeAggregate` | `'daily'` | Time aggregation |
+
+## Examples
+
+### Line Chart
+[Screenshot or code example]
+
+### Bar Chart
+[Screenshot or code example]
+```
+
+## Code Comments
+
+### Inline Comments
+
+Use inline comments for:
+1. Complex algorithms or business logic
+2. Non-obvious decisions or workarounds
+3. Known issues or limitations
+4. Performance considerations
+
+```typescript
+// This uses a logarithmic scale to make small and large values visible
+const scale = Math.log10(value + 1);
+
+// FIXME: This is a temporary solution until API supports batch requests
+for (const address of addresses) {
+  await fetchData(address);
+}
+
+// We're using local storage here because these settings rarely change
+// and we want them to persist between sessions
+localStorage.setItem('settings', JSON.stringify(settings));
+```
+
+### TODO Comments
+
+Use consistent formatting for TODO comments:
+
+```typescript
+// TODO: Implement caching for this request
+// TODO(username): Refactor this to use the new API
+// TODO(@jira-ticket): Add error handling
+```
+
+## Type Documentation
+
+### Type Definitions
+Document complex types and their purpose:
+
+```typescript
+/**
+ * Represents a time period for aggregating staking rewards.
+ * 
+ * - `daily`: Aggregate by day
+ * - `weekly`: Aggregate by week
+ * - `monthly`: Aggregate by calendar month
+ * - `quarterly`: Aggregate by three-month periods
+ * - `annual`: Aggregate by year
+ */
+export enum TimeAggregate {
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  QUARTERLY = 'quarterly',
+  ANNUAL = 'annual'
+}
+```
+
+### Generic Type Parameters
+Document generic type parameters clearly:
+
+```typescript
+/**
+ * A generic result type that encapsulates success or failure.
+ * 
+ * @template T - The type of the success data
+ * @template E - The type of the error (defaults to Error)
+ */
+export type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E };
+```
+
+## API Documentation
+
+### API Method Documentation
+Document API methods thoroughly:
+
+```typescript
+/**
+ * Retrieves staking rewards history for a specific wallet address.
+ * 
+ * The method fetches data from the provider's API and normalizes
+ * the response to match the application's common format.
+ * 
+ * @endpoint GET /api/v1/rewards/{address}
+ * @authentication Required (API key in header)
+ * 
+ * @param address - The wallet address to fetch rewards for
+ * @returns A promise that resolves to the normalized staking history
+ * 
+ * @example
+ * ```typescript
+ * const history = await ethereumService.getStakingHistory('0x1234...');
+ * ```
+ * 
+ * @see Related method {@link getProviderInfo}
+ */
+async getStakingHistory(address: string): Promise<StakingHistoryResponse> {
+  // Implementation
+}
+```
+
+### API Response Examples
+Include example responses:
+
+```typescript
+/**
+ * Response from the staking history API.
+ * 
+ * @example
+ * ```json
+ * {
+ *   "address": "0x1234...",
+ *   "rewards": [
+ *     {
+ *       "id": "reward-1",
+ *       "provider": "ethereum",
+ *       "amount": 0.01,
+ *       "token": "ETH",
+ *       "timestamp": 1650000000
+ *     }
+ *   ],
+ *   "stats": {
+ *     "totalRewards": 0.05,
+ *     "providerBreakdown": {
+ *       "ethereum": 0.03,
+ *       "solana": 0.02
+ *     },
+ *     "timeframes": {
+ *       "daily": 0.002,
+ *       "weekly": 0.01,
+ *       "monthly": 0.05
+ *     }
+ *   },
+ *   "lastUpdated": 1650100000
+ * }
+ * ```
+ */
+export interface IStakingHistoryResponse {
+  // Properties
+}
+```
+
+## Documentation Maintenance
+
+### Documentation Review
+- Review documentation during code reviews
+- Update documentation when code changes
+- Remove outdated documentation
+- Periodically audit documentation for accuracy
+
+### Documentation Versioning
+- Update version references when APIs change
+- Indicate deprecated features with `@deprecated` tags
+- Include migration guides for breaking changes
