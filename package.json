@@ -28,6 +28,7 @@
     "@radix-ui/react-tooltip": "^1.2.4",
     "@tabler/icons-react": "^3.31.0",
     "@tanstack/react-table": "^8.21.3",
+    "babel-plugin-react-compiler": "^19.1.0-rc.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lottie-react": "^2.4.1",

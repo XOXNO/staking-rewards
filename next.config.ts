@@ -2,6 +2,24 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true, // Recommended for development
+  output: 'standalone',
+  productionBrowserSourceMaps: false,
+  experimental: {
+    ppr: true,
+    reactCompiler: true,
+    webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
+    serverSourceMaps: false,
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
+  compress: false,
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
   images: {
     remotePatterns: [
       {
