@@ -24,7 +24,7 @@ const MoonIcon = () => (
 
 export function ThemeToggle() {
   const [mounted, setMounted] = React.useState(false);
-  const { theme, toggleTheme, resolvedTheme } = useTheme();
+  const { toggleTheme, resolvedTheme } = useTheme();
 
   // useEffect only runs on the client, so we can safely show the UI
   React.useEffect(() => {

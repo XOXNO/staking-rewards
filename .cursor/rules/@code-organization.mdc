@@ -65,22 +65,6 @@ src/
 - Add `.test.ts` or `.spec.ts` suffix for test files
 - Add `.module.css` suffix for CSS modules
 
-Examples:
-```
-components/
-├── ui/
-│   ├── Button/
-│   │   ├── Button.tsx
-│   │   ├── Button.test.tsx
-│   │   ├── Button.module.css
-│   │   └── index.ts
-│   └── Card/
-│       ├── Card.tsx
-│       ├── Card.test.tsx
-│       ├── Card.module.css
-│       └── index.ts
-```
-
 ### Import Organization
 - Organize imports in a consistent order:
   1. React and Next.js imports
@@ -187,13 +171,6 @@ export default RewardCard;
 
 ### Barrel Files (index.ts)
 Use barrel files to simplify imports:
-
-```typescript
-// components/ui/index.ts
-export * from './Button';
-export * from './Card';
-export * from './Input';
-```
 
 ### Hooks Organization
 - Place reusable hooks in `src/lib/hooks/`
