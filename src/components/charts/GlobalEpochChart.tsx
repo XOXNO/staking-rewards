@@ -6,7 +6,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     AreaChart,
     Area,
@@ -14,6 +14,8 @@ import {
     YAxis,
     CartesianGrid,
     ResponsiveContainer,
+    BarChart,
+    Bar,
 } from 'recharts';
 import {
     ChartConfig,
@@ -24,9 +26,11 @@ import {
 import { IAggregatedEpochData } from '@/types/dashboard'; // Assuming type exists
 import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
+import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
 
 interface IGlobalEpochChartProps {
     aggregatedEpochData: IAggregatedEpochData[] | undefined;
+    chartType: 'bar' | 'line';
     className?: string;
 }
 
@@ -35,9 +39,19 @@ interface IGlobalEpochChartProps {
  */
 export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     aggregatedEpochData,
+    chartType,
     className,
 }) => {
-    if (!aggregatedEpochData || aggregatedEpochData.length === 0) {
+    // Use the aggregation hook, passing 'totalReward' as the key
+    // We need to map aggregatedEpochData slightly first to fit the hook's expected input shape { epoch, value }
+    const preProcessedData = useMemo(() => {
+        if (!aggregatedEpochData) return undefined;
+        return aggregatedEpochData.map(d => ({ epoch: d.epoch, value: d.totalReward }));
+    }, [aggregatedEpochData]);
+
+    const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
+
+    if (!processedChartData || processedChartData.length === 0) {
         return (
             <div className={cn("text-center text-muted-foreground text-sm py-8", className)}>
                 No global epoch data available.
@@ -47,46 +61,50 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
 
     // Chart config for the global view
     const chartConfig = {
-        totalReward: {
+        reward: {
             label: "Total EGLD Reward",
-            color: "hsl(142.1, 76.2%, 36.3%)", // Use a distinct color, e.g., green
+            color: "hsl(142.1, 76.2%, 45.1%)", // Use a distinct color, e.g., green
         },
     } satisfies ChartConfig;
 
-    // Determine max value for setting upper bound buffer
-    const rewards = aggregatedEpochData.map(d => d.totalReward);
+    // Determine max value for setting upper bound buffer - Use processed data
+    const rewards = processedChartData.map(d => d.reward);
     const maxY = rewards.length > 0 ? Math.max(...rewards) : 0;
     const buffer = Math.max(maxY * 0.1, 1); // 10% buffer or at least 1 EGLD
     const yDomain: [number | string, number | string] = [0, `dataMax + ${buffer}`];
 
     const gradientId = "fill-global-reward";
 
+    // Choose the correct parent chart component
+    const ChartComponent = chartType === 'bar' ? BarChart : AreaChart;
+
     return (
         <ChartContainer
             config={chartConfig}
-            className={cn("min-h-[250px] w-full", className)} // Removed h-full here as well
+            className={cn("min-h-[250px] w-full", className)}
         >
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <ChartComponent
                     accessibilityLayer
-                    data={aggregatedEpochData}
+                    data={processedChartData}
                     margin={{
                         top: 10,
                         right: 10,
                         left: 5,
                         bottom: 15, // Increased bottom margin
                     }}
+                    barGap={chartType === 'bar' ? 2 : undefined} // Apply barGap only for BarChart
                 >
                     <defs>
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                             <stop
                                 offset="5%"
-                                stopColor="var(--color-totalReward)"
+                                stopColor="var(--color-reward)"
                                 stopOpacity={0.8}
                             />
                             <stop
                                 offset="95%"
-                                stopColor="var(--color-totalReward)"
+                                stopColor="var(--color-reward)"
                                 stopOpacity={0.1}
                             />
                         </linearGradient>
@@ -125,21 +143,32 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                         cursor={false}
                         content={
                             <ChartTooltipContent
-                                labelFormatter={(label) => `Epoch ${label}`}
+                                labelFormatter={(label, payload) =>
+                                    payload?.[0]?.payload?.label || `Epoch ${label}`
+                                }
                                 formatter={(value) => formatEgld(value as number)}
                                 indicator="dot"
                             />
                         }
                     />
-                    <Area
-                        dataKey="totalReward"
-                        type="natural"
-                        fill={`url(#${gradientId})`}
-                        stroke="var(--color-totalReward)"
-                        strokeWidth={2}
-                        dot={false}
-                    />
-                </AreaChart>
+                    {/* Conditional Rendering: Bar or Area */}
+                    {chartType === 'bar' ? (
+                        <Bar
+                            dataKey="reward"
+                            fill="var(--color-reward)"
+                            radius={2}
+                        />
+                    ) : (
+                        <Area
+                            dataKey="reward"
+                            type="natural"
+                            fill={`url(#${gradientId})`}
+                            stroke="var(--color-reward)"
+                            strokeWidth={2}
+                            dot={false}
+                        />
+                    )}
+                </ChartComponent>
             </ResponsiveContainer>
         </ChartContainer>
     );

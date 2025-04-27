@@ -6,7 +6,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -26,6 +26,7 @@ import {
 import { IEpochRewardData } from "@/api/types/xoxno-rewards.types";
 import { cn } from "@/lib/utils/cn";
 import { formatEgld } from "@/lib/utils/formatters"; // Import from utils
+import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
 
 interface IProviderEpochChartProps {
   epochData: IEpochRewardData[] | undefined;
@@ -47,7 +48,28 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   chartType,
   className,
 }) => {
-  if (!epochData || epochData.length === 0) {
+  // 1. Pre-process data to include the target 'value' for aggregation
+  const preProcessedData = useMemo(() => {
+    if (!epochData) return undefined;
+    
+    // Determine if the specific activeAddress viewing is the owner
+    // Note: This check is crucial. If multiple selected wallets view this, 
+    // activeAddress might represent multiple, requiring adjustment.
+    // Assuming for now activeAddress is a single viewing address context.
+    const isViewerOwner = activeAddress === providerOwnerAddress;
+
+    return epochData.map(epoch => ({
+      ...epoch,
+      // Calculate the value to be aggregated/plotted
+      value: epoch.epochUserRewards + (isViewerOwner ? epoch.ownerRewards : 0)
+    }));
+  }, [epochData, activeAddress, providerOwnerAddress]);
+
+  // 2. Use the aggregation hook
+  // Pass the preProcessedData and specify 'value' as the key to aggregate
+  const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
+
+  if (!processedChartData || processedChartData.length === 0) {
     return (
       <div
         className={cn(
@@ -58,49 +80,6 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
         No epoch data available for {providerName}.
       </div>
     );
-  }
-
-  const isOwner = activeAddress === providerOwnerAddress;
-  const MAX_POINTS_BEFORE_AGGREGATION = 100; // Threshold for aggregation
-  const AGGREGATION_INTERVAL = 7; // Aggregate weekly
-
-  // Prepare data for the chart
-  const sortedEpochs = [...(epochData ?? [])].sort((a, b) => a.epoch - b.epoch);
-
-  let processedChartData: Array<{
-    epoch: number | string;
-    reward: number;
-    label?: string;
-  }>;
-
-  if (sortedEpochs.length > MAX_POINTS_BEFORE_AGGREGATION) {
-    // Aggregate data
-    processedChartData = [];
-    for (let i = 0; i < sortedEpochs.length; i += AGGREGATION_INTERVAL) {
-      const chunk = sortedEpochs.slice(i, i + AGGREGATION_INTERVAL);
-      if (chunk.length === 0) continue;
-
-      const totalChunkReward = chunk.reduce((sum, epoch) => {
-        return (
-          sum + epoch.epochUserRewards + (isOwner ? epoch.ownerRewards : 0)
-        );
-      }, 0);
-      const avgReward = totalChunkReward / chunk.length;
-      const startEpoch = chunk[0].epoch;
-      const endEpoch = chunk[chunk.length - 1].epoch;
-
-      processedChartData.push({
-        epoch: startEpoch, // Use start epoch for positioning
-        reward: avgReward,
-        label: `Epochs ${startEpoch}-${endEpoch} (Avg)`, // Label for tooltip
-      });
-    }
-  } else {
-    // Use raw data
-    processedChartData = sortedEpochs.map((epoch) => ({
-      epoch: epoch.epoch,
-      reward: epoch.epochUserRewards + (isOwner ? epoch.ownerRewards : 0),
-    }));
   }
 
   // Define chart config with new color
@@ -124,7 +103,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   ];
 
   // Generate a unique ID for the gradient fill (needed again)
-  const gradientId = `fill-reward-${providerName.replace(/\s+/g, "-")}`;
+  const gradientId = `fill-provider-reward-${providerName.replace(/\s+/g, "-").toLowerCase()}`;
 
   // Choose the correct parent chart component
   const ChartComponent = chartType === "bar" ? BarChart : AreaChart;
@@ -147,7 +126,9 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
           }}
           barGap={
             chartType === "bar"
-              ? processedChartData.length > MAX_POINTS_BEFORE_AGGREGATION
+              // Check original data length for bar gap decision if needed, or simplify
+              // Using processedChartData.length > 10 might be a simpler heuristic now
+              ? processedChartData.length > 10
                 ? 0
                 : 2
               : undefined
@@ -219,7 +200,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
               dataKey="reward"
               fill="var(--color-reward)"
               radius={
-                processedChartData.length > MAX_POINTS_BEFORE_AGGREGATION
+                processedChartData.length > 10 // Use hook's config implicitly
                   ? 0
                   : 2
               }

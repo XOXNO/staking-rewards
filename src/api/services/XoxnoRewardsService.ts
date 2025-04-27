@@ -46,6 +46,7 @@ export class XoxnoRewardsService {
         let errorDetails: unknown;
         try {
           errorDetails = await response.json();
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (parseError) {
           errorDetails = await response.text(); // Fallback to text if JSON parsing fails
         }

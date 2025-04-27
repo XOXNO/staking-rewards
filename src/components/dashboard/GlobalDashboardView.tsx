@@ -6,18 +6,23 @@
 
 'use client';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assuming types exist
 import { GlobalEpochChart } from '@/components/charts';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BarChartIcon, LineChartIcon } from "lucide-react";
 
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
     aggregatedEpochData: IAggregatedEpochData[];
     className?: string;
 }
+
+// Define chart type
+type ChartType = 'bar' | 'line';
 
 /**
  * Displays an overview dashboard aggregating data across all providers.
@@ -27,7 +32,8 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     aggregatedEpochData,
     className,
 }) => {
-    // TODO: Implement detailed layout with stats and chart
+    const [chartType, setChartType] = useState<ChartType>('bar');
+
     return (
         <div className={cn('flex flex-col space-y-6 p-4 md:p-6 h-full', className)}>
             <h2 className="text-2xl font-bold">All Providers Overview</h2>
@@ -36,39 +42,61 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
             <Card className="bg-card/80 border-border/50 flex-shrink-0">
                 <CardHeader>
                     <CardTitle>Global Statistics</CardTitle>
+                    <CardDescription>Aggregated across selected wallets and providers.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 text-sm">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-sm">
                     {/* Total Column */}
-                    <div className="sm:col-span-2 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-border/50 pb-4 lg:pb-0 lg:pr-6">
-                        <p className="text-muted-foreground mb-1">Total Rewarded (All Providers)</p>
+                    <div className="border-b sm:border-b-0 sm:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
+                        <p className="text-muted-foreground mb-1">Total Rewarded</p>
                         <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.totalRewards)}</p>
                     </div>
-                    {/* 7 Day Column */}
-                    <div className="border-b sm:border-b-0 sm:border-r lg:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
-                        <p className="text-muted-foreground mb-2 font-medium">Last 7 Epochs (Global)</p>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Avg:</span> <span className="font-mono">{formatEgld(globalStats.avg7)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Min:</span> <span className="font-mono">{formatEgld(globalStats.minMax7.min)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Max:</span> <span className="font-mono">{formatEgld(globalStats.minMax7.max)}</span></div>
+                    {/* Avg Per Epoch - Removing as not available */}
+                    {/* <div className="border-b sm:border-b-0 lg:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
+                        <p className="text-muted-foreground mb-1">Avg Per Epoch (All Time)</p>
+                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avgOverall)}</p>
+                    </div> */}
+                    {/* Last 7 Epochs */}
+                    <div className="border-b sm:border-b-0 sm:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
+                        <p className="text-muted-foreground mb-1">Last 7 Epochs Avg</p>
+                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avg7)}</p>
                     </div>
-                    {/* 30 Day Column */}
+                    {/* Last 30 Epochs */}
                     <div>
-                        <p className="text-muted-foreground mb-2 font-medium">Last 30 Epochs (Global)</p>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Avg:</span> <span className="font-mono">{formatEgld(globalStats.avg30)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Min:</span> <span className="font-mono">{formatEgld(globalStats.minMax30.min)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Max:</span> <span className="font-mono">{formatEgld(globalStats.minMax30.max)}</span></div>
+                        <p className="text-muted-foreground mb-1">Last 30 Epochs Avg</p>
+                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avg30)}</p>
                     </div>
                 </CardContent>
             </Card>
 
             {/* Chart Section */}
             <Card className="bg-card/80 border-border/50 flex flex-col flex-grow overflow-hidden">
-                <CardHeader>
-                    <CardTitle>Global Epoch Rewards</CardTitle>
+                <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div>
+                        <CardTitle>Total Rewards Per Epoch</CardTitle>
+                        <CardDescription>Sum of rewards from all selected wallets per epoch.</CardDescription>
+                    </div>
+                    <ToggleGroup 
+                        type="single" 
+                        variant="outline"
+                        value={chartType}
+                        onValueChange={(value: ChartType) => { if (value) setChartType(value); }}
+                        size="sm"
+                        aria-label="Chart Type"
+                    >
+                        <ToggleGroupItem value="bar" aria-label="Bar chart">
+                            <BarChartIcon className="h-4 w-4" />
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="line" aria-label="Line chart">
+                            <LineChartIcon className="h-4 w-4" />
+                        </ToggleGroupItem>
+                    </ToggleGroup>
                 </CardHeader>
                 <CardContent className="flex-grow p-2">
                     <GlobalEpochChart 
                         aggregatedEpochData={aggregatedEpochData}
-                        className="h-full" />
+                        chartType={chartType}
+                        className="h-full min-h-[300px]"
+                    />
                 </CardContent>
             </Card>
         </div>

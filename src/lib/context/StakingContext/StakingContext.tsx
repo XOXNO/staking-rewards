@@ -4,81 +4,168 @@
  * @module lib/context/StakingContext
  */
 
-'use client';
+"use client";
 
-import React, { createContext, useReducer, useContext, useMemo, useCallback } from 'react';
-import { XoxnoRewardsService } from '@/api/services/XoxnoRewardsService';
-import type { IStakingState, StakingAction, IStakingContextProps } from './StakingContext.type';
-import type { XoxnoApiError } from '@/api/services/XoxnoRewardsService';
+import React, {
+  createContext,
+  useReducer,
+  useContext,
+  useMemo,
+  useCallback,
+} from "react";
+import { XoxnoRewardsService } from "@/api/services/XoxnoRewardsService";
+import type {
+  IStakingState,
+  StakingAction,
+  IStakingContextProps,
+} from "./StakingContext.type";
+import type { XoxnoApiError } from "@/api/services/XoxnoRewardsService";
 
 const initialState: IStakingState = {
-  activeAddress: null,
+  addedAddresses: [],
+  selectedAddresses: [],
   selectedProviderAddress: null,
   rewardsData: {},
-  isLoading: false,
-  error: null,
+  isLoading: {},
+  error: {},
 };
 
 // Create the context with a default value (can be undefined or initial state)
 // Throwing an error if used outside provider is a common pattern.
-const StakingContext = createContext<IStakingContextProps | undefined>(undefined);
+const StakingContext = createContext<IStakingContextProps | undefined>(
+  undefined
+);
+
+// Helper to remove properties from an object immutably
+const removeProperty = <T, K extends keyof T>(key: K, obj: T): Omit<T, K> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { [key]: _, ...rest } = obj;
+  return rest;
+};
 
 // Reducer function to handle state updates
-const stakingReducer = (state: IStakingState, action: StakingAction): IStakingState => {
+const stakingReducer = (
+  state: IStakingState,
+  action: StakingAction
+): IStakingState => {
   switch (action.type) {
-    case 'FETCH_REWARDS_START':
+    case "ADD_ADDRESS":
+      const addressToAdd = action.payload.address;
+      if (state.addedAddresses.includes(addressToAdd)) {
+        return state; // Already added
+      }
       return {
         ...state,
-        isLoading: true,
-        error: null,
-        activeAddress: action.payload.address,
-        selectedProviderAddress: null,
-        rewardsData: {},
+        addedAddresses: [...state.addedAddresses, addressToAdd],
+        // Automatically select newly added address
+        selectedAddresses: [
+          ...state.selectedAddresses.filter((a) => a !== addressToAdd),
+          addressToAdd,
+        ],
+        selectedProviderAddress: null, // Reset provider selection when adding a new wallet
       };
-    case 'FETCH_REWARDS_SUCCESS':
-      const providers = action.payload.data.providersWithIdentityInfo;
-      const firstProviderAddress = providers && providers.length > 0 ? providers[0].provider : null;
+
+    case "REMOVE_ADDRESS":
+      const addressToRemove = action.payload.address;
       return {
         ...state,
-        isLoading: false,
+        addedAddresses: state.addedAddresses.filter(
+          (a) => a !== addressToRemove
+        ),
+        selectedAddresses: state.selectedAddresses.filter(
+          (a) => a !== addressToRemove
+        ),
+        rewardsData: removeProperty(addressToRemove, state.rewardsData),
+        isLoading: removeProperty(addressToRemove, state.isLoading),
+        error: removeProperty(addressToRemove, state.error),
+      };
+
+    case "TOGGLE_SELECTED_ADDRESS":
+      const addressToToggle = action.payload.address;
+      const isSelected = state.selectedAddresses.includes(addressToToggle);
+      return {
+        ...state,
+        selectedAddresses: isSelected
+          ? state.selectedAddresses.filter((a) => a !== addressToToggle)
+          : [...state.selectedAddresses, addressToToggle],
+      };
+
+    case "SET_SELECTED_ADDRESSES": // Optional handler
+      return {
+        ...state,
+        selectedAddresses: action.payload.addresses,
+      };
+
+    case "FETCH_REWARDS_START":
+      return {
+        ...state,
+        isLoading: {
+          ...state.isLoading,
+          [action.payload.address]: true,
+        },
+        error: {
+          ...state.error,
+          [action.payload.address]: null, // Clear previous error for this address
+        },
+      };
+
+    case "FETCH_REWARDS_SUCCESS":
+      return {
+        ...state,
+        isLoading: {
+          ...state.isLoading,
+          [action.payload.address]: false,
+        },
         rewardsData: {
+          ...state.rewardsData,
           [action.payload.address]: action.payload.data,
         },
-        error: null,
-        selectedProviderAddress: firstProviderAddress,
       };
-    case 'FETCH_REWARDS_FAILURE':
+
+    case "FETCH_REWARDS_FAILURE":
       return {
         ...state,
-        isLoading: false,
-        error: action.payload.error,
-        selectedProviderAddress: null,
-        rewardsData: {},
+        isLoading: {
+          ...state.isLoading,
+          [action.payload.address]: false,
+        },
+        error: {
+          ...state.error,
+          [action.payload.address]: action.payload.error,
+        },
+        // Keep potentially partial data or clear it?
+        // rewardsData: {
+        //   ...state.rewardsData,
+        //   [action.payload.address]: null,
+        // },
       };
-    case 'SET_ACTIVE_ADDRESS':
-       return {
-         ...state,
-         activeAddress: action.payload.address,
-         selectedProviderAddress: null,
-         error: null,
-       };
-    case 'SELECT_PROVIDER':
-      return {
-          ...state,
-          selectedProviderAddress: action.payload.providerAddress,
-      };
-    case 'CLEAR_ERROR':
+
+    case "SELECT_PROVIDER":
       return {
         ...state,
-        error: null,
+        selectedProviderAddress: action.payload.providerAddress,
       };
+
+    case "CLEAR_ADDRESS_ERROR":
+      return {
+        ...state,
+        error: {
+          ...state.error,
+          [action.payload.address]: null,
+        },
+      };
+
     default:
+      // If using TypeScript, this helps catch unhandled actions
+      // const exhaustiveCheck: never = action;
       return state;
   }
 };
 
 // Provider component
-export const StakingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StakingProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, dispatch] = useReducer(stakingReducer, initialState);
 
   // Instantiate the service - consider dependency injection for testability if needed
@@ -94,42 +181,115 @@ export const StakingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-// Custom hook for easy context consumption
-export const useStaking = (): IStakingContextProps & { fetchRewards: (address: string) => Promise<void> } => {
+// Custom hook exposing state, dispatch, and convenient action functions
+export const useStaking = () => {
   const context = useContext(StakingContext);
   if (context === undefined) {
-    throw new Error('useStaking must be used within a StakingProvider');
+    throw new Error("useStaking must be used within a StakingProvider");
   }
 
-  // Instantiate the service again here or lift it higher if needed across hooks
-  // For simplicity here, we instantiate again, but this could be optimized.
-  const xoxnoService = useMemo(() => new XoxnoRewardsService(), []);
   const { state, dispatch } = context;
+  const xoxnoService = useMemo(() => new XoxnoRewardsService(), []);
 
-  // Create an async action function for convenience
-  const fetchRewards = useCallback(async (address: string): Promise<void> => {
-    // Check cache first (optional, but good practice)
-    // if (state.rewardsData[address]) {
-    //   dispatch({ type: 'SET_ACTIVE_ADDRESS', payload: { address } });
-    //   return;
-    // }
-    
-    dispatch({ type: 'FETCH_REWARDS_START', payload: { address } });
-    try {
-      const result = await xoxnoService.getUserRewards(address);
-      if (result.success) {
-        dispatch({ type: 'FETCH_REWARDS_SUCCESS', payload: { address, data: result.data } });
-      } else {
-        // Ensure error payload matches expected type
-        const errorPayload: XoxnoApiError | string = result.error instanceof Error ? result.error.message : result.error;
-        dispatch({ type: 'FETCH_REWARDS_FAILURE', payload: { address, error: errorPayload } });
+  // --- Action Functions ---
+
+  const fetchRewards = useCallback(
+    async (address: string): Promise<void> => {
+      dispatch({ type: "FETCH_REWARDS_START", payload: { address } });
+      try {
+        const result = await xoxnoService.getUserRewards(address);
+        if (result.success) {
+          dispatch({
+            type: "FETCH_REWARDS_SUCCESS",
+            payload: { address, data: result.data },
+          });
+        } else {
+          const errorPayload: XoxnoApiError | string =
+            result.error instanceof Error ? result.error.message : result.error;
+          dispatch({
+            type: "FETCH_REWARDS_FAILURE",
+            payload: { address, error: errorPayload },
+          });
+        }
+      } catch (err) {
+        console.error(`Unhandled error fetching rewards for ${address}:`, err);
+        const errorPayload: string =
+          err instanceof Error ? err.message : "An unexpected error occurred.";
+        dispatch({
+          type: "FETCH_REWARDS_FAILURE",
+          payload: { address, error: errorPayload },
+        });
       }
-    } catch (err) {
-      console.error('Unhandled error in fetchRewards:', err);
-      const errorPayload: string = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      dispatch({ type: 'FETCH_REWARDS_FAILURE', payload: { address, error: errorPayload } });
-    }
-  }, [xoxnoService, dispatch]); // Add state.rewardsData if implementing caching check
+    },
+    [xoxnoService, dispatch]
+  );
 
-  return { state, dispatch, fetchRewards };
-}; 
+  const addAddress = useCallback(
+    async (address: string): Promise<void> => {
+      // Check if already added or currently loading to prevent duplicates/race conditions
+      if (state.addedAddresses.includes(address) || state.isLoading[address]) {
+        // Optionally re-select it if already added but not selected
+        if (!state.selectedAddresses.includes(address)) {
+          dispatch({ type: "TOGGLE_SELECTED_ADDRESS", payload: { address } });
+        }
+        return;
+      }
+
+      dispatch({ type: "ADD_ADDRESS", payload: { address } });
+      await fetchRewards(address); // Fetch data after adding
+    },
+    [
+      state.addedAddresses,
+      state.isLoading,
+      state.selectedAddresses,
+      dispatch,
+      fetchRewards,
+    ]
+  );
+
+  const removeAddress = useCallback(
+    (address: string): void => {
+      dispatch({ type: "REMOVE_ADDRESS", payload: { address } });
+    },
+    [dispatch]
+  );
+
+  const toggleSelectedAddress = useCallback(
+    (address: string): void => {
+      // Ensure the address is actually one that has been added
+      if (state.addedAddresses.includes(address)) {
+        dispatch({ type: "TOGGLE_SELECTED_ADDRESS", payload: { address } });
+      }
+    },
+    [state.addedAddresses, dispatch]
+  );
+
+  const selectProvider = useCallback(
+    (providerAddress: string | null): void => {
+      dispatch({ type: "SELECT_PROVIDER", payload: { providerAddress } });
+    },
+    [dispatch]
+  );
+
+  const clearAddressError = useCallback(
+    (address: string): void => {
+      dispatch({ type: "CLEAR_ADDRESS_ERROR", payload: { address } });
+    },
+    [dispatch]
+  );
+
+  // --- End Action Functions ---
+
+  return {
+    state,
+    dispatch,
+    // Expose action functions
+    addAddress,
+    removeAddress,
+    toggleSelectedAddress,
+    selectProvider,
+    clearAddressError,
+    // Keep fetchRewards exposed? Probably not needed directly by components anymore
+    // fetchRewards,
+  };
+};
