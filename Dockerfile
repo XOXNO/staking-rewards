@@ -17,10 +17,6 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-# Copy patches and apply them
-COPY patches ./patches
-RUN npx patch-package
-
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
