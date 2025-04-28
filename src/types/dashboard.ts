@@ -9,6 +9,10 @@ export interface IGlobalStats {
     avg30: number;
     minMax7: { min: number; max: number };
     minMax30: { min: number; max: number };
+    /**
+     * Optionnel: total des rewards par wallet (pour affichage de la répartition)
+     */
+    totalRewardsPerWallet?: Record<string, number>;
 }
 
 export interface IAggregatedEpochData {

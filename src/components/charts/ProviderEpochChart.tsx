@@ -131,16 +131,32 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
           />
           <ChartTooltip
             cursor={false}
-            content={
-              <ChartTooltipContent
-                labelFormatter={(_, payload) => {
-                  const epoch = payload && payload[0] && payload[0].payload && payload[0].payload.epoch;
-                  return epoch !== undefined ? `Epoch ${epoch}` : 'Epoch ?';
-                }}
-                formatter={(value, name) => `${formatEgld(value as number)} (${name})`}
-                indicator="dot"
-              />
-            }
+            content={({ payload, label }) => (
+              <div className="p-2">
+                <div className="font-semibold mb-1">Epoch {label}</div>
+                {payload?.map((entry) => {
+                  const wallet = typeof entry.name === 'string' ? entry.name : '';
+                  const color = wallet ? walletColorMap[wallet] : '#888';
+                  const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
+                  return (
+                    <div key={wallet} style={{ color, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: color,
+                          marginRight: 6,
+                          verticalAlign: 'middle',
+                        }}
+                      />
+                      {formatEgld(value)} <span style={{ fontWeight: 400 }}>({wallet})</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           />
           {/* Afficher une série par wallet */}
           {wallets.map(wallet =>

@@ -140,9 +140,11 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
             <div className="p-4">
                 <div className="flex items-center mb-2 px-2">
                   <h2 className="text-lg font-semibold tracking-tight flex-1">Providers</h2>
+                </div>
+                <div className="absolute right-4 top-6 z-10">
                   <button
                     type="button"
-                    className="ml-2 p-1 rounded hover:bg-muted transition"
+                    className="p-1 rounded hover:bg-muted transition"
                     onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
                     title={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
                   >
@@ -169,6 +171,9 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
                     ) : (
                         sortedProviders.map((provider) => {
                             const staked = isCurrentlyStaked(provider);
+                            const name = provider.identityInfo?.name || provider.identity || provider.provider;
+                            const maxLen = 18;
+                            const displayName = name.length > maxLen ? name.slice(0, maxLen - 3) + '...' : name;
                             return (
                                 <Button
                                     key={provider.provider}
@@ -190,14 +195,19 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
                                             className="mr-3 rounded-full w-7 h-7 object-cover border"
                                         />
                                     )}
-                                    <span className="flex-1 text-left truncate">
-                                        {provider.identityInfo?.name || provider.identity || provider.provider}
-                                    </span>
-                                    {totalRewardsPerProvider && totalRewardsPerProvider[provider.provider] !== undefined && (
-                                        <span className="ml-2 text-xs text-muted-foreground font-mono tabular-nums">
-                                            {totalRewardsPerProvider[provider.provider].toLocaleString(undefined, { maximumFractionDigits: 3 })} EGLD
+                                    <span className="flex-1 min-w-0 flex items-center justify-between">
+                                        <span
+                                            className="block truncate overflow-hidden whitespace-nowrap text-ellipsis"
+                                            style={{ maxWidth: 'calc(100% - 80px)' }}
+                                        >
+                                            {displayName}
                                         </span>
-                                    )}
+                                        {totalRewardsPerProvider && totalRewardsPerProvider[provider.provider] !== undefined && (
+                                            <span className="ml-2 text-xs text-muted-foreground font-mono tabular-nums flex-shrink-0 text-right">
+                                                {totalRewardsPerProvider[provider.provider].toLocaleString(undefined, { maximumFractionDigits: 3 })} EGLD
+                                            </span>
+                                        )}
+                                    </span>
                                 </Button>
                             );
                         })

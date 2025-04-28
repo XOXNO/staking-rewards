@@ -28,6 +28,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BarChartIcon, LineChartIcon } from "lucide-react";
 import { getWalletColorMap } from '@/lib/utils/utils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
+import { WalletPercentBar } from './WalletPercentBar';
 
 interface IProviderDetailViewProps {
   selectedAddresses: string[];
@@ -207,15 +208,15 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               Last 7 Epochs
             </p>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg:</span>{" "}
+              <span className="text-muted-foreground">Avg:</span>{' '}
               <span className="font-mono">{formatEgld(stats7.avg)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Min:</span>{" "}
+              <span className="text-muted-foreground">Min:</span>{' '}
               <span className="font-mono">{formatEgld(stats7.min)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Max:</span>{" "}
+              <span className="text-muted-foreground">Max:</span>{' '}
               <span className="font-mono">{formatEgld(stats7.max)}</span>
             </div>
           </div>
@@ -225,19 +226,35 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               Last 30 Epochs
             </p>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg:</span>{" "}
+              <span className="text-muted-foreground">Avg:</span>{' '}
               <span className="font-mono">{formatEgld(stats30.avg)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Min:</span>{" "}
+              <span className="text-muted-foreground">Min:</span>{' '}
               <span className="font-mono">{formatEgld(stats30.min)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Max:</span>{" "}
+              <span className="text-muted-foreground">Max:</span>{' '}
               <span className="font-mono">{formatEgld(stats30.max)}</span>
             </div>
           </div>
         </CardContent>
+        {/* Wallet Percent Bar - only if several addresses */}
+        {selectedAddresses.length > 1 && (
+          <WalletPercentBar
+            walletAmounts={React.useMemo(() => {
+              // Calcule le total par wallet pour ce provider
+              const walletTotals: Record<string, number> = {};
+              selectedAddresses.forEach(addr => {
+                const rewards = fullRewardsData[addr]?.providersFullRewardsData?.[selectedProviderAddress];
+                walletTotals[addr] = rewards ? rewards.reduce((sum, epoch) => sum + (epoch.epochUserRewards || 0), 0) : 0;
+              });
+              return walletTotals;
+            }, [selectedAddresses, fullRewardsData, selectedProviderAddress])}
+            walletColorMap={walletColorMap}
+            className="mb-2"
+          />
+        )}
       </Card>
 
       {/* Chart Section */}

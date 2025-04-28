@@ -14,6 +14,7 @@ import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assum
 import { GlobalEpochChart } from '@/components/charts';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BarChartIcon, LineChartIcon } from "lucide-react";
+import { WalletPercentBar } from './WalletPercentBar';
 
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
@@ -70,6 +71,14 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avg30)}</p>
                     </div>
                 </CardContent>
+                {/* Wallet Percent Bar - only if several addresses */}
+                {Object.keys(walletColorMap).length > 1 && globalStats.totalRewardsPerWallet && (
+                    <WalletPercentBar
+                        walletAmounts={globalStats.totalRewardsPerWallet}
+                        walletColorMap={walletColorMap}
+                        className="mb-2"
+                    />
+                )}
             </Card>
 
             {/* Chart Section */}
