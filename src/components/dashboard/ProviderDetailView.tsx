@@ -275,7 +275,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               providerIdentity.identityInfo?.name || providerIdentity.provider
             }
             chartType={chartType}
-            className="h-full"
+            className="h-[250px] min-h-[250px]"
           />
         </CardContent>
       </Card>

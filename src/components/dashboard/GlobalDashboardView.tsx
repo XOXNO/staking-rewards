@@ -101,7 +101,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         epochWalletData={epochWalletData}
                         walletColorMap={walletColorMap}
                         chartType={chartType}
-                        className="h-full min-h-[300px]"
+                        className="h-[250px] min-h-[250px]"
                     />
                 </CardContent>
             </Card>

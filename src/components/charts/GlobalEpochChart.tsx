@@ -80,7 +80,7 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     return (
         <ChartContainer
             config={{}}
-            className={cn("min-h-[250px] w-full", className)}
+            className={cn("min-h-[250px] h-[250px] w-full", className)}
         >
             <ResponsiveContainer width="100%" height="100%">
                 <ChartComponent
@@ -126,7 +126,10 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                         cursor={false}
                         content={
                             <ChartTooltipContent
-                                labelFormatter={(label) => `Epoch ${label}`}
+                                labelFormatter={(_, payload) => {
+                                    const epoch = payload && payload[0] && payload[0].payload && payload[0].payload.epoch;
+                                    return epoch !== undefined ? `Epoch ${epoch}` : 'Epoch ?';
+                                }}
                                 // Affiche chaque wallet et sa reward dans le tooltip
                                 formatter={(value, name) => `${formatEgld(value as number)} (${name})`}
                                 indicator="dot"
