@@ -28,48 +28,36 @@ import { cn } from "@/lib/utils/cn";
 import { formatEgld } from "@/lib/utils/formatters"; // Import from utils
 import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
 
+/**
+ * Format d'une entrée de données pour le graphique d'epochs par wallet.
+ * Chaque objet représente un epoch, avec les rewards par wallet.
+ * @example { epoch: 1234, 'erd1...': 1.23, 'erd1...2': 0.5 }
+ */
+export interface IWalletEpochChartData {
+  epoch: number;
+  [wallet: string]: number | string;
+}
+
 interface IProviderEpochChartProps {
-  epochData: IEpochRewardData[] | undefined;
+  epochWalletData: IWalletEpochChartData[];
+  walletColorMap: Record<string, string>;
   providerName: string;
-  activeAddress: string; // Needed to determine owner rewards
-  providerOwnerAddress: string;
   chartType: "bar" | "line";
   className?: string;
 }
 
 /**
- * Renders a bar chart showing EGLD rewards per epoch for a specific provider.
+ * Renders a stacked chart showing EGLD rewards per epoch for a specific provider, split by wallet.
  */
 export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
-  epochData,
+  epochWalletData,
+  walletColorMap,
   providerName,
-  activeAddress,
-  providerOwnerAddress,
   chartType,
   className,
 }) => {
-  // 1. Pre-process data to include the target 'value' for aggregation
-  const preProcessedData = useMemo(() => {
-    if (!epochData) return undefined;
-    
-    // Determine if the specific activeAddress viewing is the owner
-    // Note: This check is crucial. If multiple selected wallets view this, 
-    // activeAddress might represent multiple, requiring adjustment.
-    // Assuming for now activeAddress is a single viewing address context.
-    const isViewerOwner = activeAddress === providerOwnerAddress;
-
-    return epochData.map(epoch => ({
-      ...epoch,
-      // Calculate the value to be aggregated/plotted
-      value: epoch.epochUserRewards + (isViewerOwner ? epoch.ownerRewards : 0)
-    }));
-  }, [epochData, activeAddress, providerOwnerAddress]);
-
-  // 2. Use the aggregation hook
-  // Pass the preProcessedData and specify 'value' as the key to aggregate
-  const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
-
-  if (!processedChartData || processedChartData.length === 0) {
+  // Si pas de données, afficher un message
+  if (!epochWalletData || epochWalletData.length === 0) {
     return (
       <div
         className={cn(
@@ -82,75 +70,36 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
     );
   }
 
-  // Define chart config with new color
-  const chartConfig = {
-    reward: {
-      label: "EGLD Reward",
-      // Use a vibrant blue - adjust HSL as needed
-      color: "hsl(210, 90%, 55%)", // Electronic Blue (example)
-    },
-  } satisfies ChartConfig;
+  // Liste des wallets (ordre stable)
+  const wallets = Object.keys(walletColorMap);
 
-  // Determine max value for setting upper bound buffer
-  const rewards = processedChartData.map(d => d.reward);
-  const maxY = rewards.length > 0 ? Math.max(...rewards) : 0;
-  const buffer = Math.max(maxY * 0.1, 0.5); // 10% buffer or at least 0.5
+  // Déterminer la valeur max pour le Y (somme des rewards par epoch)
+  const maxY = Math.max(
+    ...epochWalletData.map(d => wallets.reduce((sum, w) => sum + Number(d[w] || 0), 0))
+  );
+  const buffer = Math.max(maxY * 0.1, 0.5);
+  const yDomain: [number | string, number | string] = [0, `dataMax + ${buffer}`];
 
-  // Set lower domain to 0, let Recharts handle upper bound with a buffer
-  const yDomain: [number | string, number | string] = [
-    0, // Start Y-axis at 0
-    `dataMax + ${buffer}` // Let Recharts calculate max + buffer
-  ];
-
-  // Generate a unique ID for the gradient fill (needed again)
-  const gradientId = `fill-provider-reward-${providerName.replace(/\s+/g, "-").toLowerCase()}`;
-
-  // Choose the correct parent chart component
+  // Choisir le composant parent
   const ChartComponent = chartType === "bar" ? BarChart : AreaChart;
 
   return (
     <ChartContainer
-      config={chartConfig}
+      config={{}}
       className={cn("min-h-[250px] w-full h-full", className)}
     >
       <ResponsiveContainer width="100%" height="100%">
-        {/* Use the dynamic ChartComponent */}
         <ChartComponent
           accessibilityLayer
-          data={processedChartData}
+          data={epochWalletData}
           margin={{
             top: 10,
             right: 10,
             left: 5,
-            bottom: 15 // Ensure enough space for X-axis
+            bottom: 15
           }}
-          barGap={
-            chartType === "bar"
-              // Check original data length for bar gap decision if needed, or simplify
-              // Using processedChartData.length > 10 might be a simpler heuristic now
-              ? processedChartData.length > 10
-                ? 0
-                : 2
-              : undefined
-          }
+          barGap={chartType === "bar" ? 2 : undefined}
         >
-          {/* Define gradient for Area fill */}
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              {/* Use var(--color-reward) which is set by ChartContainer based on config */}
-              <stop
-                offset="5%"
-                stopColor="var(--color-reward)"
-                stopOpacity={0.8}
-              />
-              <stop
-                offset="95%"
-                stopColor="var(--color-reward)"
-                stopOpacity={0.1}
-              />
-            </linearGradient>
-          </defs>
-
           <CartesianGrid
             vertical={false}
             strokeDasharray="3 3"
@@ -173,7 +122,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
             domain={yDomain}
             tickFormatter={(value) => {
               if (typeof value !== 'number') return '';
-              return value.toLocaleString(undefined, { 
+              return value.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 1
               });
@@ -184,36 +133,38 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
             cursor={false}
             content={
               <ChartTooltipContent
-                // Use custom label if available (from aggregated data), else format epoch number
-                labelFormatter={(label, payload) =>
-                  payload?.[0]?.payload?.label || `Epoch ${label}`
-                }
-                formatter={(value) => formatEgld(value as number)}
+                labelFormatter={(label) => `Epoch ${label}`}
+                formatter={(value, name) => `${formatEgld(value as number)} (${name})`}
                 indicator="dot"
               />
             }
           />
-
-          {/* Conditional Rendering: Bar or Area */}
-          {chartType === "bar" ? (
-            <Bar
-              dataKey="reward"
-              fill="var(--color-reward)"
-              radius={
-                processedChartData.length > 10 // Use hook's config implicitly
-                  ? 0
-                  : 2
-              }
-            />
-          ) : (
-            <Area
-              dataKey="reward"
-              type="natural"
-              fill={`url(#${gradientId})`} // Re-add gradient fill
-              stroke="var(--color-reward)" // Use the config color variable
-              strokeWidth={2}
-              dot={false}
-            />
+          {/* Afficher une série par wallet */}
+          {wallets.map(wallet =>
+            chartType === "bar" ? (
+              <Bar
+                key={wallet}
+                dataKey={wallet}
+                stackId="a"
+                fill={walletColorMap[wallet]}
+                name={wallet}
+                radius={2}
+                isAnimationActive={false}
+              />
+            ) : (
+              <Area
+                key={wallet}
+                dataKey={wallet}
+                stackId="a"
+                type="natural"
+                fill={walletColorMap[wallet]}
+                stroke={walletColorMap[wallet]}
+                strokeWidth={2}
+                dot={false}
+                name={wallet}
+                isAnimationActive={false}
+              />
+            )
           )}
         </ChartComponent>
       </ResponsiveContainer>

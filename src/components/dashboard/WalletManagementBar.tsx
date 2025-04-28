@@ -6,7 +6,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useStaking } from "@/lib/context/StakingContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +15,9 @@ import { XIcon, PlusIcon } from "lucide-react";
 import { shortenAddress } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/cn";
 import { AddWalletDialog } from "./AddWalletDialog"; // Import the reusable dialog
+import { getWalletColorMap } from '@/lib/utils/utils';
+import { CHART_COLORS } from '@/lib/constants/chartColors';
+import { ColorDotPicker } from './ColorDotPicker';
 
 interface IWalletManagementBarProps {
   className?: string;
@@ -25,6 +28,27 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
 }) => {
   const { state, toggleSelectedAddress, removeAddress } = useStaking();
   const { addedAddresses, selectedAddresses } = state;
+
+  // Etat local pour le mapping wallet -> couleur
+  const [walletColorMap, setWalletColorMap] = useState<Record<string, string>>({});
+
+  // Initialise le mapping à chaque changement de la liste
+  useEffect(() => {
+    setWalletColorMap((prev) => {
+      // Conserve les couleurs custom, complète avec la palette pour les nouveaux
+      const autoMap = getWalletColorMap(addedAddresses, CHART_COLORS.categorical);
+      const merged: Record<string, string> = {};
+      addedAddresses.forEach(addr => {
+        merged[addr] = prev[addr] || autoMap[addr];
+      });
+      return merged;
+    });
+  }, [addedAddresses]);
+
+  // Handler pour changer la couleur d'un wallet
+  const handleColorChange = (address: string, color: string) => {
+    setWalletColorMap((prev) => ({ ...prev, [address]: color }));
+  };
 
   return (
     <div
@@ -42,17 +66,30 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
                 key={address}
                 className="flex items-center gap-1.5 border rounded-md px-2 py-1 bg-muted/50 text-xs"
               >
+                {/* Dot coloré + picker */}
+                <ColorDotPicker
+                  color={walletColorMap[address]}
+                  onChange={(color) => handleColorChange(address, color)}
+                  size={16}
+                />
+                {/* Checkbox colorée */}
                 <Checkbox
                   id={`mgmt-wallet-${address}`}
                   checked={selectedAddresses.includes(address)}
                   onCheckedChange={() => toggleSelectedAddress(address)}
                   aria-label={`Select wallet ${shortenAddress(address)}`}
                   className="h-3.5 w-3.5"
+                  style={{
+                    accentColor: walletColorMap[address],
+                    borderColor: walletColorMap[address],
+                  }}
                 />
+                {/* Texte coloré */}
                 <Label
                   htmlFor={`mgmt-wallet-${address}`}
                   className="font-mono cursor-pointer truncate"
                   title={address}
+                  style={{ color: walletColorMap[address] }}
                 >
                   {shortenAddress(address, 6, 4)}
                 </Label>

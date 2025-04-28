@@ -31,7 +31,7 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { MenuIcon } from 'lucide-react';
-import { aggregateAllEpochData, calculateGlobalStats } from '@/lib/utils/calculationUtils';
+import { aggregateAllEpochData, calculateGlobalStats, aggregateEpochDataByWallet } from '@/lib/utils/calculationUtils';
 import { IProviderWithIdentity, IEpochRewardData, IXoxnoUserRewardsResponse } from '@/api/types/xoxno-rewards.types';
 import {
     Card, 
@@ -42,6 +42,8 @@ import {
 } from '@/components/ui/card';
 import { AddWalletDialog } from '@/components/dashboard/AddWalletDialog';
 import { AddWalletForm } from '@/components/dashboard/WalletInputForm/WalletInputForm';
+import { CHART_COLORS } from '@/lib/constants/chartColors';
+import { getWalletColorMap } from '@/lib/utils/utils';
 
 
 export default function HomePage(): React.ReactElement {
@@ -95,7 +97,7 @@ export default function HomePage(): React.ReactElement {
            return acc;
        }, {} as Record<string, boolean>);
    }, [selectedAddresses, isLoading]);
-  const { globalStats, aggregatedEpochData } = useMemo(() => {
+  const { globalStats, aggregatedEpochData, epochWalletData, walletColorMap, allProvidersData, allProviderOwners } = useMemo(() => {
       
       // Use the refined loading states
       const isLoadingAnySelected = selectedAddresses.some(addr => relevantLoadingStates[addr]);
@@ -106,11 +108,11 @@ export default function HomePage(): React.ReactElement {
       // Wait until loading is complete for all selected addresses
       if (selectedAddresses.length === 0 || isLoadingAnySelected || !hasDataForAllSelected) {
           // Return null/empty state while loading or if data isn't ready
-          return { globalStats: null, aggregatedEpochData: [] }; 
+          return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} }; 
       }
       
       // --- Proceed with calculation only if all data is ready ---
-      const allProvidersData: Record<string, IEpochRewardData[]> = {}; 
+      const allProvidersData: Record<string, any[]> = {}; 
       const allProviderOwners: Record<string, string> = {};
       let providerDataFound = false; // Flag to check if any data was processed
 
@@ -120,7 +122,7 @@ export default function HomePage(): React.ReactElement {
               providerDataFound = true;
               Object.entries(response.providersFullRewardsData).forEach(([pAddr, data]) => {
                   if (!allProvidersData[pAddr]) allProvidersData[pAddr] = [];
-                  allProvidersData[pAddr].push(...data);
+                  allProvidersData[pAddr].push(...data.map(epoch => ({ ...epoch, walletAddress: addr })));
               });
           }
           response?.providersWithIdentityInfo?.forEach(p => {
@@ -131,7 +133,7 @@ export default function HomePage(): React.ReactElement {
       });
       
       if (!providerDataFound) {
-        return { globalStats: null, aggregatedEpochData: [] };
+        return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} };
       }
       
       const aggData = aggregateAllEpochData(
@@ -139,10 +141,16 @@ export default function HomePage(): React.ReactElement {
           allProviderOwners,
           selectedAddresses 
       );
+      const epochWalletData = aggregateEpochDataByWallet(
+          allProvidersData,
+          allProviderOwners,
+          selectedAddresses
+      );
+      const walletColorMap = getWalletColorMap(selectedAddresses, CHART_COLORS.categorical);
       const stats = calculateGlobalStats(aggData);
 
 
-      return { globalStats: stats, aggregatedEpochData: aggData };
+      return { globalStats: stats, aggregatedEpochData: aggData, epochWalletData, walletColorMap, allProvidersData, allProviderOwners };
 
   }, [selectedAddresses, relevantRewardsData, relevantLoadingStates]); // Use refined dependencies
 
@@ -193,6 +201,8 @@ export default function HomePage(): React.ReactElement {
                            <GlobalDashboardView
                                globalStats={globalStats}
                                aggregatedEpochData={aggregatedEpochData}
+                               epochWalletData={epochWalletData}
+                               walletColorMap={walletColorMap}
                            />
                        ) : (
                            <div className="flex items-center justify-center h-full text-muted-foreground">

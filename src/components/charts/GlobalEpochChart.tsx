@@ -30,6 +30,8 @@ import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useCha
 
 interface IGlobalEpochChartProps {
     aggregatedEpochData: IAggregatedEpochData[] | undefined;
+    epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
+    walletColorMap: Record<string, string>;
     chartType: 'bar' | 'line';
     className?: string;
 }
@@ -39,6 +41,8 @@ interface IGlobalEpochChartProps {
  */
 export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     aggregatedEpochData,
+    epochWalletData,
+    walletColorMap,
     chartType,
     className,
 }) => {
@@ -51,7 +55,8 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
 
     const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
 
-    if (!processedChartData || processedChartData.length === 0) {
+    // Si pas de données, afficher un message
+    if (!epochWalletData || epochWalletData.length === 0) {
         return (
             <div className={cn("text-center text-muted-foreground text-sm py-8", className)}>
                 No global epoch data available.
@@ -59,57 +64,36 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
         );
     }
 
-    // Chart config for the global view
-    const chartConfig = {
-        reward: {
-            label: "Total EGLD Reward",
-            color: "hsl(142.1, 76.2%, 45.1%)", // Use a distinct color, e.g., green
-        },
-    } satisfies ChartConfig;
+    // Récupérer la liste des wallets à partir du mapping couleur (ordre stable)
+    const wallets = Object.keys(walletColorMap);
 
-    // Determine max value for setting upper bound buffer - Use processed data
-    const rewards = processedChartData.map(d => d.reward);
-    const maxY = rewards.length > 0 ? Math.max(...rewards) : 0;
-    const buffer = Math.max(maxY * 0.1, 1); // 10% buffer or at least 1 EGLD
+    // Déterminer la valeur max pour le Y (somme des rewards par epoch)
+    const maxY = Math.max(
+        ...epochWalletData.map(d => wallets.reduce((sum, w) => sum + (d[w] || 0), 0))
+    );
+    const buffer = Math.max(maxY * 0.1, 1);
     const yDomain: [number | string, number | string] = [0, `dataMax + ${buffer}`];
 
-    const gradientId = "fill-global-reward";
-
-    // Choose the correct parent chart component
+    // Choisir le composant parent
     const ChartComponent = chartType === 'bar' ? BarChart : AreaChart;
 
     return (
         <ChartContainer
-            config={chartConfig}
+            config={{}}
             className={cn("min-h-[250px] w-full", className)}
         >
             <ResponsiveContainer width="100%" height="100%">
                 <ChartComponent
                     accessibilityLayer
-                    data={processedChartData}
+                    data={epochWalletData}
                     margin={{
                         top: 10,
                         right: 10,
                         left: 5,
-                        bottom: 15, // Increased bottom margin
+                        bottom: 15,
                     }}
-                    barGap={chartType === 'bar' ? 2 : undefined} // Apply barGap only for BarChart
+                    barGap={chartType === 'bar' ? 2 : undefined}
                 >
-                    <defs>
-                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop
-                                offset="5%"
-                                stopColor="var(--color-reward)"
-                                stopOpacity={0.8}
-                            />
-                            <stop
-                                offset="95%"
-                                stopColor="var(--color-reward)"
-                                stopOpacity={0.1}
-                            />
-                        </linearGradient>
-                    </defs>
-
                     <CartesianGrid
                         vertical={false}
                         strokeDasharray="3 3"
@@ -121,14 +105,13 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                         axisLine={false}
                         tickMargin={8}
                         fontSize={10}
-                        minTickGap={80} // Increased min gap
+                        minTickGap={80}
                     />
                     <YAxis
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
                         fontSize={10}
-                        // Remove fixed width: width={70}
                         domain={yDomain}
                         tickFormatter={(value) => {
                             if (typeof value !== 'number') return '';
@@ -143,30 +126,39 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                         cursor={false}
                         content={
                             <ChartTooltipContent
-                                labelFormatter={(label, payload) =>
-                                    payload?.[0]?.payload?.label || `Epoch ${label}`
-                                }
-                                formatter={(value) => formatEgld(value as number)}
+                                labelFormatter={(label) => `Epoch ${label}`}
+                                // Affiche chaque wallet et sa reward dans le tooltip
+                                formatter={(value, name) => `${formatEgld(value as number)} (${name})`}
                                 indicator="dot"
                             />
                         }
                     />
-                    {/* Conditional Rendering: Bar or Area */}
-                    {chartType === 'bar' ? (
-                        <Bar
-                            dataKey="reward"
-                            fill="var(--color-reward)"
-                            radius={2}
-                        />
-                    ) : (
-                        <Area
-                            dataKey="reward"
-                            type="natural"
-                            fill={`url(#${gradientId})`}
-                            stroke="var(--color-reward)"
-                            strokeWidth={2}
-                            dot={false}
-                        />
+                    {/* Afficher une série par wallet */}
+                    {wallets.map(wallet =>
+                        chartType === 'bar' ? (
+                            <Bar
+                                key={wallet}
+                                dataKey={wallet}
+                                stackId="a"
+                                fill={walletColorMap[wallet]}
+                                name={wallet}
+                                radius={2}
+                                isAnimationActive={false}
+                            />
+                        ) : (
+                            <Area
+                                key={wallet}
+                                dataKey={wallet}
+                                stackId="a"
+                                type="natural"
+                                fill={walletColorMap[wallet]}
+                                stroke={walletColorMap[wallet]}
+                                strokeWidth={2}
+                                dot={false}
+                                name={wallet}
+                                isAnimationActive={false}
+                            />
+                        )
                     )}
                 </ChartComponent>
             </ResponsiveContainer>

@@ -18,6 +18,8 @@ import { BarChartIcon, LineChartIcon } from "lucide-react";
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
     aggregatedEpochData: IAggregatedEpochData[];
+    epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
+    walletColorMap: Record<string, string>;
     className?: string;
 }
 
@@ -30,6 +32,8 @@ type ChartType = 'bar' | 'line';
 export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     globalStats,
     aggregatedEpochData,
+    epochWalletData,
+    walletColorMap,
     className,
 }) => {
     const [chartType, setChartType] = useState<ChartType>('bar');
@@ -94,6 +98,8 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                 <CardContent className="flex-grow p-2">
                     <GlobalEpochChart 
                         aggregatedEpochData={aggregatedEpochData}
+                        epochWalletData={epochWalletData}
+                        walletColorMap={walletColorMap}
                         chartType={chartType}
                         className="h-full min-h-[300px]"
                     />

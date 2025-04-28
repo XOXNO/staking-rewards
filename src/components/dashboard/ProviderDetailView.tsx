@@ -20,12 +20,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
-import { calculateProviderAggregatedStats } from "@/lib/utils/calculationUtils";
+import { calculateProviderAggregatedStats, aggregateProviderEpochDataByWallet } from "@/lib/utils/calculationUtils";
 import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BarChartIcon, LineChartIcon } from "lucide-react";
+import { getWalletColorMap } from '@/lib/utils/utils';
+import { CHART_COLORS } from '@/lib/constants/chartColors';
 
 interface IProviderDetailViewProps {
   selectedAddresses: string[];
@@ -69,65 +71,39 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
   }
 
   // 2. Aggregate Epoch Data (Result is providerEpochDataAggregated)
-  const providerEpochDataAggregated: IAggregatedProviderEpoch[] =
-    useMemo(() => {
-      const aggregated: Record<
-        number,
-        { userRewards: number; ownerRewards: number; count: number }
-      > = {};
+  const providerEpochWalletData = useMemo(() => {
+    // On construit la structure { [wallet]: montant } pour chaque epoch, pour ce provider
+    // On reconstitue le format attendu à partir de fullRewardsData
+    const allProvidersData: Record<string, any[]> = {};
+    const providerOwners: Record<string, string> = {};
+    selectedAddresses.forEach(addr => {
+      const rewards = fullRewardsData[addr]?.providersFullRewardsData?.[selectedProviderAddress];
+      if (rewards) {
+        if (!allProvidersData[selectedProviderAddress]) allProvidersData[selectedProviderAddress] = [];
+        allProvidersData[selectedProviderAddress].push(...rewards.map(epoch => ({ ...epoch, walletAddress: addr })));
+      }
+      const owner = fullRewardsData[addr]?.providersWithIdentityInfo?.find(p => p.provider === selectedProviderAddress)?.owner;
+      if (owner) providerOwners[selectedProviderAddress] = owner;
+    });
+    return aggregateProviderEpochDataByWallet(allProvidersData, providerOwners, selectedAddresses, selectedProviderAddress);
+  }, [fullRewardsData, selectedAddresses, selectedProviderAddress]);
 
-      selectedAddresses.forEach((addr) => {
-        const providerDataForAddr =
-          fullRewardsData[addr]?.providersFullRewardsData?.[
-            selectedProviderAddress
-          ];
-        const ownerAddress = fullRewardsData[
-          addr
-        ]?.providersWithIdentityInfo?.find(
-          (p) => p.provider === selectedProviderAddress
-        )?.owner;
-
-        if (providerDataForAddr) {
-          providerDataForAddr.forEach((epoch) => {
-            if (!aggregated[epoch.epoch]) {
-              aggregated[epoch.epoch] = {
-                userRewards: 0,
-                ownerRewards: 0,
-                count: 0,
-              };
-            }
-            // Sum user rewards directly
-            aggregated[epoch.epoch].userRewards += epoch.epochUserRewards;
-            // Add owner rewards if *this specific address* is the owner
-            if (addr === ownerAddress) {
-              aggregated[epoch.epoch].ownerRewards += epoch.ownerRewards;
-            }
-            aggregated[epoch.epoch].count += 1; // Count how many wallets contributed
-          });
-        }
-      });
-
-      // Convert back to IEpochRewardData array format (adjusting structure as needed)
-      // For the chart, we need a single value per epoch. Let's sum user+owner for now.
-      // Note: This simplification might lose granular owner info if needed elsewhere.
-      const result = Object.entries(aggregated).map(([epochStr, data]) => ({
-        epoch: parseInt(epochStr, 10),
-        epochUserRewards: data.userRewards,
-        ownerRewards: data.ownerRewards,
-        totalEpochReward: data.userRewards + data.ownerRewards,
-        // Remove placeholders if not needed by chart/calcs
-        // apr: 0,
-        // epochTimestamp: 0
-      }));
-
-      return result.sort((a, b) => a.epoch - b.epoch);
-    }, [selectedAddresses, fullRewardsData, selectedProviderAddress]);
+  // Mapping wallet -> couleur (palette catégorielle)
+  const walletColorMap = useMemo(() => getWalletColorMap(selectedAddresses, CHART_COLORS.categorical), [selectedAddresses]);
 
   // 3. Recalculate Stats using the new helper
-  const sortedAggregatedEpochs = useMemo(
-    () => [...providerEpochDataAggregated].sort((a, b) => b.epoch - a.epoch), // Sort descending
-    [providerEpochDataAggregated]
-  );
+  const sortedAggregatedEpochs = useMemo(() => {
+    // On convertit le format { epoch, [wallet]: number }[] en IAggregatedProviderEpoch[]
+    return [...providerEpochWalletData]
+      .map(epochObj => ({
+        epoch: epochObj.epoch,
+        totalEpochReward: Object.entries(epochObj)
+          .filter(([key]) => key !== 'epoch')
+          .reduce((sum, [_, val]) => sum + Number(val), 0),
+        // Optionnel: on peut ajouter epochUserRewards/ownerRewards si besoin
+      }))
+      .sort((a, b) => b.epoch - a.epoch); // Sort descending
+  }, [providerEpochWalletData]);
 
   const totalProviderRewards = useMemo(
     () =>
@@ -293,27 +269,11 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
         </CardHeader>
         <CardContent className="flex-grow p-2">
           <ProviderEpochChart
-            // Map aggregated data to the structure ProviderEpochChart expects internally
-            // Pass the pre-aggregated total reward as the main 'reward' field
-            epochData={providerEpochDataAggregated.map((e) => ({
-              epoch: e.epoch,
-              // Rename totalEpochReward to reward for the chart's internal use
-              reward: e.totalEpochReward,
-              // Include other fields needed by internal logic (epochUserRewards, ownerRewards)
-              // These might not be strictly necessary if internal aggregation is bypassed, but safer to include
-              epochUserRewards: e.epochUserRewards,
-              ownerRewards: e.ownerRewards,
-              // Add required dummy fields from IEpochRewardData if absolutely necessary
-              // It's better to adapt the chart component if possible
-              totalStaked: 0, // Dummy value - Must be number
-              apr: 0, // Dummy value
-              epochTimestamp: 0, // Dummy value
-            }))}
+            epochWalletData={providerEpochWalletData}
+            walletColorMap={walletColorMap}
             providerName={
               providerIdentity.identityInfo?.name || providerIdentity.provider
             }
-            activeAddress={selectedAddresses.join(",")} // Pass identifier
-            providerOwnerAddress={providerIdentity.owner} // Pass owner for potential internal checks
             chartType={chartType}
             className="h-full"
           />
