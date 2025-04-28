@@ -14,10 +14,11 @@ import React, {
   useCallback,
 } from "react";
 import { XoxnoRewardsService } from "@/api/services/XoxnoRewardsService";
-import type {
-  IStakingState,
-  StakingAction,
-  IStakingContextProps,
+import {
+  type IStakingState,
+  type StakingAction,
+  type IStakingContextProps,
+  StakingActionEnum,
 } from "./StakingContext.type";
 import type { XoxnoApiError } from "@/api/services/XoxnoRewardsService";
 
@@ -49,7 +50,7 @@ const stakingReducer = (
   action: StakingAction
 ): IStakingState => {
   switch (action.type) {
-    case "ADD_ADDRESS":
+    case StakingActionEnum.ADD_ADDRESS:
       const addressToAdd = action.payload.address;
       if (state.addedAddresses.includes(addressToAdd)) {
         return state; // Already added
@@ -65,7 +66,7 @@ const stakingReducer = (
         selectedProviderAddress: null, // Reset provider selection when adding a new wallet
       };
 
-    case "REMOVE_ADDRESS":
+    case StakingActionEnum.REMOVE_ADDRESS:
       const addressToRemove = action.payload.address;
       return {
         ...state,
@@ -80,7 +81,7 @@ const stakingReducer = (
         error: removeProperty(addressToRemove, state.error),
       };
 
-    case "TOGGLE_SELECTED_ADDRESS":
+    case StakingActionEnum.TOGGLE_SELECTED_ADDRESS:
       const addressToToggle = action.payload.address;
       const isSelected = state.selectedAddresses.includes(addressToToggle);
       return {
@@ -90,13 +91,13 @@ const stakingReducer = (
           : [...state.selectedAddresses, addressToToggle],
       };
 
-    case "SET_SELECTED_ADDRESSES": // Optional handler
+    case StakingActionEnum.SET_SELECTED_ADDRESSES: // Optional handler
       return {
         ...state,
         selectedAddresses: action.payload.addresses,
       };
 
-    case "FETCH_REWARDS_START":
+    case StakingActionEnum.FETCH_REWARDS_START:
       return {
         ...state,
         isLoading: {
@@ -109,7 +110,7 @@ const stakingReducer = (
         },
       };
 
-    case "FETCH_REWARDS_SUCCESS":
+    case StakingActionEnum.FETCH_REWARDS_SUCCESS:
       return {
         ...state,
         isLoading: {
@@ -122,7 +123,7 @@ const stakingReducer = (
         },
       };
 
-    case "FETCH_REWARDS_FAILURE":
+    case StakingActionEnum.FETCH_REWARDS_FAILURE:
       return {
         ...state,
         isLoading: {
@@ -140,13 +141,13 @@ const stakingReducer = (
         // },
       };
 
-    case "SELECT_PROVIDER":
+    case StakingActionEnum.SELECT_PROVIDER:
       return {
         ...state,
         selectedProviderAddress: action.payload.providerAddress,
       };
 
-    case "CLEAR_ADDRESS_ERROR":
+    case StakingActionEnum.CLEAR_ADDRESS_ERROR:
       return {
         ...state,
         error: {
@@ -195,19 +196,22 @@ export const useStaking = () => {
 
   const fetchRewards = useCallback(
     async (address: string): Promise<void> => {
-      dispatch({ type: "FETCH_REWARDS_START", payload: { address } });
+      dispatch({
+        type: StakingActionEnum.FETCH_REWARDS_START,
+        payload: { address },
+      });
       try {
         const result = await xoxnoService.getUserRewards(address);
         if (result.success) {
           dispatch({
-            type: "FETCH_REWARDS_SUCCESS",
+            type: StakingActionEnum.FETCH_REWARDS_SUCCESS,
             payload: { address, data: result.data },
           });
         } else {
           const errorPayload: XoxnoApiError | string =
             result.error instanceof Error ? result.error.message : result.error;
           dispatch({
-            type: "FETCH_REWARDS_FAILURE",
+            type: StakingActionEnum.FETCH_REWARDS_FAILURE,
             payload: { address, error: errorPayload },
           });
         }
@@ -216,7 +220,7 @@ export const useStaking = () => {
         const errorPayload: string =
           err instanceof Error ? err.message : "An unexpected error occurred.";
         dispatch({
-          type: "FETCH_REWARDS_FAILURE",
+          type: StakingActionEnum.FETCH_REWARDS_FAILURE,
           payload: { address, error: errorPayload },
         });
       }
@@ -230,12 +234,15 @@ export const useStaking = () => {
       if (state.addedAddresses.includes(address) || state.isLoading[address]) {
         // Optionally re-select it if already added but not selected
         if (!state.selectedAddresses.includes(address)) {
-          dispatch({ type: "TOGGLE_SELECTED_ADDRESS", payload: { address } });
+          dispatch({
+            type: StakingActionEnum.TOGGLE_SELECTED_ADDRESS,
+            payload: { address },
+          });
         }
         return;
       }
 
-      dispatch({ type: "ADD_ADDRESS", payload: { address } });
+      dispatch({ type: StakingActionEnum.ADD_ADDRESS, payload: { address } });
       await fetchRewards(address); // Fetch data after adding
     },
     [
@@ -249,7 +256,10 @@ export const useStaking = () => {
 
   const removeAddress = useCallback(
     (address: string): void => {
-      dispatch({ type: "REMOVE_ADDRESS", payload: { address } });
+      dispatch({
+        type: StakingActionEnum.REMOVE_ADDRESS,
+        payload: { address },
+      });
     },
     [dispatch]
   );
@@ -258,7 +268,10 @@ export const useStaking = () => {
     (address: string): void => {
       // Ensure the address is actually one that has been added
       if (state.addedAddresses.includes(address)) {
-        dispatch({ type: "TOGGLE_SELECTED_ADDRESS", payload: { address } });
+        dispatch({
+          type: StakingActionEnum.TOGGLE_SELECTED_ADDRESS,
+          payload: { address },
+        });
       }
     },
     [state.addedAddresses, dispatch]
@@ -266,14 +279,20 @@ export const useStaking = () => {
 
   const selectProvider = useCallback(
     (providerAddress: string | null): void => {
-      dispatch({ type: "SELECT_PROVIDER", payload: { providerAddress } });
+      dispatch({
+        type: StakingActionEnum.SELECT_PROVIDER,
+        payload: { providerAddress },
+      });
     },
     [dispatch]
   );
 
   const clearAddressError = useCallback(
     (address: string): void => {
-      dispatch({ type: "CLEAR_ADDRESS_ERROR", payload: { address } });
+      dispatch({
+        type: StakingActionEnum.CLEAR_ADDRESS_ERROR,
+        payload: { address },
+      });
     },
     [dispatch]
   );
