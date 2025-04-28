@@ -59,14 +59,14 @@ export const AddWalletForm: React.FC<IAddWalletFormProps> = ({ className, onSucc
             className={cn('flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full max-w-lg', className)}
         >
             <div className="w-full flex flex-col">
-                <div className="flex flex-grow">
+                <div className="flex flex-grow group">
                     <Input
                         type="text"
                         value={address}
                         onChange={handleAddressChange}
-                        placeholder="Enter wallet address to add..."
+                        placeholder="Enter your MultiversX (EGLD) wallet address to track its rewards..."
                         className={cn(
-                            "flex-grow rounded-r-none focus-visible:ring-offset-0",
+                            "flex-grow rounded-r-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring h-12 text-base placeholder:truncate placeholder:overflow-ellipsis placeholder:whitespace-nowrap group-hover:border-ring group-hover:bg-muted/40 group-focus-within:border-ring group-focus-within:bg-muted/40 transition-colors text-foreground bg-background dark:bg-input/30 border border-input",
                             validationError ? 'border-destructive focus-visible:ring-destructive' : ''
                         )}
                         aria-label="Wallet Address Input"
@@ -74,7 +74,10 @@ export const AddWalletForm: React.FC<IAddWalletFormProps> = ({ className, onSucc
                     />
                     <Button 
                         type="submit" 
-                        className="rounded-l-none min-w-[100px]"
+                        className="rounded-l-none min-w-[100px] h-12 text-base border border-input transition-colors
+                            bg-black text-white dark:bg-white dark:text-black
+                            group-hover:border-ring group-focus:border-ring
+                            shadow-sm"
                         disabled={!address || !!validationError || isCurrentAddressLoading}
                     >
                         {isCurrentAddressLoading ? 'Adding...' : 'Add Wallet'}

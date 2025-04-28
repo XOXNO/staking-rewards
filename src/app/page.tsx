@@ -41,6 +41,7 @@ import {
     CardTitle 
 } from '@/components/ui/card';
 import { AddWalletDialog } from '@/components/dashboard/AddWalletDialog';
+import { AddWalletForm } from '@/components/dashboard/WalletInputForm/WalletInputForm';
 
 
 export default function HomePage(): React.ReactElement {
@@ -213,11 +214,9 @@ export default function HomePage(): React.ReactElement {
                   Connect multiple wallets, track aggregated rewards across all staking providers, and gain clear insights into your EGLD earnings.
               </p>
               {/* Add Wallet Button using the Dialog */}
-              <AddWalletDialog>
-                 <Button size="lg" className="px-8 py-6 text-lg">
-                      <Wallet className="mr-2 h-5 w-5" /> Add Your First Wallet
-                 </Button>
-              </AddWalletDialog>
+              <div className="flex justify-center w-full mt-8">
+                <AddWalletForm />
+              </div>
           </section>
 
           {/* Features Section */}
