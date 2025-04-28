@@ -224,7 +224,7 @@ export default function HomePage(): React.ReactElement {
               <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                   {/* Feature 1 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <Wallet className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Multi-Wallet Aggregation</CardTitle>
@@ -236,7 +236,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                   {/* Feature 2 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <BarChart3 className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Detailed Provider Insights</CardTitle>
@@ -248,7 +248,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                   {/* Feature 3 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <TrendingUp className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Clear Visualizations</CardTitle>
@@ -260,7 +260,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 4 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <DatabaseZap className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Direct Blockchain Data</CardTitle>
@@ -272,7 +272,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 5 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <PieChart className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Global Overview</CardTitle>
@@ -284,7 +284,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 6 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <CheckCircle className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Simple & Clean Interface</CardTitle>
