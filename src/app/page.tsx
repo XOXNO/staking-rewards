@@ -149,17 +149,33 @@ export default function HomePage(): React.ReactElement {
   const isAnyLoading = selectedAddresses.some(addr => isLoading[addr]);
   const anyError = selectedAddresses.find(addr => error[addr]);
 
+  const totalRewardsPerProvider: Record<string, number> = useMemo(() => {
+    const totals: Record<string, number> = {};
+    selectedAddresses.forEach(addr => {
+      const rewards = rewardsData[addr]?.totalRewardsPerProvider;
+      if (rewards) {
+        Object.entries(rewards).forEach(([provider, amount]) => {
+          totals[provider] = (totals[provider] || 0) + amount;
+        });
+      }
+    });
+    return totals;
+  }, [selectedAddresses, rewardsData]);
+
   let dashboardContent: React.ReactNode = null;
 
   if (addedAddresses.length > 0) {
       dashboardContent = (
            <div className="flex flex-1 overflow-hidden">
-               <aside className="w-72 hidden md:flex md:flex-col flex-shrink-0 border-r border-border/50">
+               <aside className="w-80 hidden md:flex md:flex-col flex-shrink-0 border-r border-border/50">
                    <div className="flex-grow overflow-y-auto">
                       <ProviderSidebar
                           providers={combinedProviders}
                           selectedProviderAddress={selectedProviderAddress}
                           onSelectProvider={handleSelectProvider}
+                          totalRewardsPerProvider={totalRewardsPerProvider}
+                          fullRewardsData={rewardsData}
+                          currentEpoch={selectedAddresses.reduce((epoch, addr) => rewardsData[addr]?.currentEpoch ?? epoch, 0)}
                       />
                    </div>
                </aside>
@@ -312,7 +328,7 @@ export default function HomePage(): React.ReactElement {
                               <span className="sr-only">Select Provider</span>
                           </Button>
                       </SheetTrigger>
-                      <SheetContent side="left" className="w-72 flex flex-col p-0">
+                      <SheetContent side="left" className="w-80 flex flex-col p-0">
                            <SheetHeader className="p-4 border-b border-border/50 flex-shrink-0">
                               <SheetTitle className="text-lg font-semibold tracking-tight">
                                   Providers
@@ -324,6 +340,9 @@ export default function HomePage(): React.ReactElement {
                                   selectedProviderAddress={selectedProviderAddress}
                                   onSelectProvider={handleSelectProvider} 
                                   onItemClick={() => setIsSheetOpen(false)}
+                                  totalRewardsPerProvider={totalRewardsPerProvider}
+                                  fullRewardsData={rewardsData}
+                                  currentEpoch={selectedAddresses.reduce((epoch, addr) => rewardsData[addr]?.currentEpoch ?? epoch, 0)}
                                />
                            </div>
                       </SheetContent>
