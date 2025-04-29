@@ -11,13 +11,14 @@ import { useStaking } from "@/lib/context/StakingContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { XIcon, PlusIcon } from "lucide-react";
 import { shortenAddress } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/cn";
-import { AddWalletDialog } from "./AddWalletDialog"; // Import the reusable dialog
 import { getWalletColorMap } from '@/lib/utils/utils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { ColorDotPicker } from './ColorDotPicker';
+import { useToast } from "@/hooks/use-toast";
 
 interface IWalletManagementBarProps {
   className?: string;
@@ -26,8 +27,10 @@ interface IWalletManagementBarProps {
 export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
   className,
 }) => {
-  const { state, toggleSelectedAddress, removeAddress } = useStaking();
+  const { state, toggleSelectedAddress, removeAddress, addAddress } = useStaking();
   const { addedAddresses, selectedAddresses } = state;
+  const [newAddress, setNewAddress] = useState("");
+  const { toast } = useToast();
 
   // Etat local pour le mapping wallet -> couleur
   const [walletColorMap, setWalletColorMap] = useState<Record<string, string>>({});
@@ -50,6 +53,57 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
     setWalletColorMap((prev) => ({ ...prev, [address]: color }));
   };
 
+  // Handler pour ajouter une nouvelle adresse
+  const handleAddAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedAddress = newAddress.trim();
+    
+    if (!trimmedAddress) return;
+
+    try {
+      // Vérifie si l'adresse existe déjà
+      if (addedAddresses.includes(trimmedAddress)) {
+        toast({
+          variant: "default",
+          title: "Address already exists",
+          description: `The address ${shortenAddress(trimmedAddress)} is already in your list.`,
+          className: "bg-orange-500 text-white border-orange-600",
+        });
+        return;
+      }
+
+      // Vérifie le format de l'adresse MVX (commence par 'erd' et a une longueur de 62 caractères)
+      if (!trimmedAddress.startsWith('erd') || trimmedAddress.length !== 62) {
+        toast({
+          variant: "destructive",
+          title: "Invalid MVX address",
+          description: "Please enter a valid MultiversX address starting with 'erd'.",
+        });
+        return;
+      }
+
+      // Ajoute l'adresse
+      addAddress(trimmedAddress);
+      setNewAddress("");
+      
+      // Notification de succès
+      toast({
+        variant: "default",
+        title: "Address added successfully",
+        description: `${shortenAddress(trimmedAddress)} has been added to your list.`,
+        className: "bg-green-500 text-white border-green-600",
+      });
+
+    } catch (error) {
+      // Notification d'erreur
+      toast({
+        variant: "destructive",
+        title: "Error adding address",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -57,6 +111,21 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
         className
       )}
     >
+      {/* Formulaire d'ajout d'adresse */}
+      <form onSubmit={handleAddAddress} className="flex items-center gap-2 min-w-[300px]">
+        <Input
+          type="text"
+          value={newAddress}
+          onChange={(e) => setNewAddress(e.target.value)}
+          placeholder="Enter MVX address..."
+          className="h-8 text-sm"
+        />
+        <Button type="submit" variant="outline" size="sm" className="h-8">
+          <PlusIcon className="h-4 w-4" />
+          <span className="sr-only">Add Wallet</span>
+        </Button>
+      </form>
+
       {addedAddresses.length > 0 && (
         <div className="hidden md:flex items-center gap-4 flex-grow">
           <span className="text-sm font-semibold mr-2">Wallets:</span>
@@ -107,27 +176,6 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
           </div>
         </div>
       )}
-
-      <div
-        className={cn(
-          "flex items-center flex-shrink-0",
-          addedAddresses.length > 0 ? "md:ml-auto" : "ml-0"
-        )}
-      >
-        <AddWalletDialog>
-          {addedAddresses.length === 0 ? (
-            <Button variant="default" size="sm">
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add First Wallet
-            </Button>
-          ) : (
-            <Button variant="outline" size="icon" className="h-7 w-7">
-              <PlusIcon className="h-4 w-4" />
-              <span className="sr-only">Add Wallet</span>
-            </Button>
-          )}
-        </AddWalletDialog>
-      </div>
     </div>
   );
 };

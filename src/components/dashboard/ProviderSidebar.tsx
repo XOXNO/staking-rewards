@@ -204,7 +204,7 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
                                         </span>
                                         {totalRewardsPerProvider && totalRewardsPerProvider[provider.provider] !== undefined && (
                                             <span className="ml-2 text-xs text-muted-foreground font-mono tabular-nums flex-shrink-0 text-right">
-                                                {totalRewardsPerProvider[provider.provider].toLocaleString(undefined, { maximumFractionDigits: 3 })} EGLD
+                                                {totalRewardsPerProvider[provider.provider].toLocaleString('en-US', { maximumFractionDigits: 3 })} EGLD
                                             </span>
                                         )}
                                     </span>

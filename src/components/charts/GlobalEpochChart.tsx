@@ -27,6 +27,8 @@ import { IAggregatedEpochData } from '@/types/dashboard'; // Assuming type exist
 import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
+import { ChartTooltipContent as NewChartTooltipContent } from "@/components/ui/chart/ChartTooltipContent";
+import { ChartTooltipWrapper } from "@/components/ui/chart/ChartTooltipWrapper";
 
 interface IGlobalEpochChartProps {
     aggregatedEpochData: IAggregatedEpochData[] | undefined;
@@ -71,8 +73,8 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     const maxY = Math.max(
         ...epochWalletData.map(d => wallets.reduce((sum, w) => sum + (d[w] || 0), 0))
     );
-    const buffer = Math.max(maxY * 0.1, 1);
-    const yDomain: [number | string, number | string] = [0, `dataMax + ${buffer}`];
+    const buffer = maxY * 0.2; // Toujours 20% de la valeur maximale
+    const yDomain: [number | string, number | string] = [0, maxY + buffer];
 
     // Choisir le composant parent
     const ChartComponent = chartType === 'bar' ? BarChart : AreaChart;
@@ -115,41 +117,18 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                         domain={yDomain}
                         tickFormatter={(value) => {
                             if (typeof value !== 'number') return '';
+                            // Adapter le nombre de décimales selon la valeur max
+                            const decimals = maxY < 0.1 ? 4 : maxY < 1 ? 3 : maxY < 10 ? 2 : maxY < 100 ? 1 : 0;
                             return value.toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 1
+                                minimumFractionDigits: decimals,
+                                maximumFractionDigits: decimals
                             });
                         }}
                         allowDecimals={true}
                     />
                     <ChartTooltip
                         cursor={false}
-                        content={({ payload, label }) => (
-                            <div className="p-2">
-                                <div className="font-semibold mb-1">Epoch {label}</div>
-                                {payload?.map((entry) => {
-                                    const wallet = typeof entry.name === 'string' ? entry.name : '';
-                                    const color = wallet ? walletColorMap[wallet] : '#888';
-                                    const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
-                                    return (
-                                        <div key={wallet} style={{ color, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span
-                                                style={{
-                                                    display: 'inline-block',
-                                                    width: 10,
-                                                    height: 10,
-                                                    borderRadius: '50%',
-                                                    background: color,
-                                                    marginRight: 6,
-                                                    verticalAlign: 'middle',
-                                                }}
-                                            />
-                                            {formatEgld(value)} <span style={{ fontWeight: 400 }}>({wallet})</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                        content={ChartTooltipWrapper({ walletColorMap })}
                     />
                     {/* Afficher une série par wallet */}
                     {wallets.map(wallet =>

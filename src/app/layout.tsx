@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 import { StakingProvider } from "@/lib/context/StakingContext";
+import { Toaster } from "@/components/ui/toaster";
 
 // Configure Inter font
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             {children}
           </StakingProvider>
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );
