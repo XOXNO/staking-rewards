@@ -6,7 +6,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useStaking } from "@/lib/context/StakingContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { XIcon, PlusIcon } from "lucide-react";
 import { shortenAddress } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/cn";
-import { getWalletColorMap } from '@/lib/utils/utils';
-import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { ColorDotPicker } from './ColorDotPicker';
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,31 +25,10 @@ interface IWalletManagementBarProps {
 export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
   className,
 }) => {
-  const { state, toggleSelectedAddress, removeAddress, addAddress } = useStaking();
-  const { addedAddresses, selectedAddresses } = state;
+  const { state, toggleSelectedAddress, removeAddress, addAddress, setWalletColor } = useStaking();
+  const { addedAddresses, selectedAddresses, walletColorMap } = state;
   const [newAddress, setNewAddress] = useState("");
   const { toast } = useToast();
-
-  // Etat local pour le mapping wallet -> couleur
-  const [walletColorMap, setWalletColorMap] = useState<Record<string, string>>({});
-
-  // Initialise le mapping à chaque changement de la liste
-  useEffect(() => {
-    setWalletColorMap((prev) => {
-      // Conserve les couleurs custom, complète avec la palette pour les nouveaux
-      const autoMap = getWalletColorMap(addedAddresses, CHART_COLORS.categorical);
-      const merged: Record<string, string> = {};
-      addedAddresses.forEach(addr => {
-        merged[addr] = prev[addr] || autoMap[addr];
-      });
-      return merged;
-    });
-  }, [addedAddresses]);
-
-  // Handler pour changer la couleur d'un wallet
-  const handleColorChange = (address: string, color: string) => {
-    setWalletColorMap((prev) => ({ ...prev, [address]: color }));
-  };
 
   // Handler pour ajouter une nouvelle adresse
   const handleAddAddress = (e: React.FormEvent) => {
@@ -138,7 +115,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
                 {/* Dot coloré + picker */}
                 <ColorDotPicker
                   color={walletColorMap[address]}
-                  onChange={(color) => handleColorChange(address, color)}
+                  onChange={(color) => setWalletColor(address, color)}
                   size={16}
                 />
                 {/* Checkbox colorée */}

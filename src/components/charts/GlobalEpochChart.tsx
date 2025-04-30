@@ -23,18 +23,18 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart";
-import { IAggregatedEpochData } from '@/types/dashboard'; // Assuming type exists
+import { IAggregatedEpochData } from '@/types/dashboard';
 import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
 import { ChartTooltipContent as NewChartTooltipContent } from "@/components/ui/chart/ChartTooltipContent";
 import { ChartTooltipWrapper } from "@/components/ui/chart/ChartTooltipWrapper";
 import { calculateCumulativeData } from "@/lib/utils/chartUtils";
+import { useStaking } from "@/lib/context/StakingContext";
 
 interface IGlobalEpochChartProps {
     aggregatedEpochData: IAggregatedEpochData[] | undefined;
     epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
-    walletColorMap: Record<string, string>;
     chartType: 'bar' | 'line';
     displayMode: 'daily' | 'cumulative';
     className?: string;
@@ -46,11 +46,13 @@ interface IGlobalEpochChartProps {
 export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     aggregatedEpochData,
     epochWalletData,
-    walletColorMap,
     chartType,
     displayMode,
     className,
 }) => {
+    // Utilise le contexte pour obtenir les couleurs
+    const { state: { walletColorMap } } = useStaking();
+
     // Use the aggregation hook, passing 'totalReward' as the key
     const preProcessedData = useMemo(() => {
         if (!aggregatedEpochData) return undefined;

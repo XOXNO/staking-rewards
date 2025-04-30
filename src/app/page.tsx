@@ -44,6 +44,7 @@ import { AddWalletDialog } from '@/components/dashboard/AddWalletDialog';
 import { AddWalletForm } from '@/components/dashboard/WalletInputForm/WalletInputForm';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { getWalletColorMap } from '@/lib/utils/utils';
+import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 
 export default function HomePage(): React.ReactElement {
@@ -212,7 +213,9 @@ export default function HomePage(): React.ReactElement {
                            />
                        ) : (
                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                               {isAnyLoading ? 'Calculating global overview...' : 'No global data available for selected wallets.'}
+                               {isAnyLoading ? (
+                                   <FunLoadingMessages />
+                               ) : 'No global data available for selected wallets.'}
                            </div>
                        )
                    ) : (

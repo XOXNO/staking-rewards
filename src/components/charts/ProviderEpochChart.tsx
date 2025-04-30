@@ -30,6 +30,7 @@ import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useCha
 import { ChartTooltipContent as NewChartTooltipContent } from "@/components/ui/chart/ChartTooltipContent";
 import { ChartTooltipWrapper } from "@/components/ui/chart/ChartTooltipWrapper";
 import { calculateCumulativeData } from "@/lib/utils/chartUtils";
+import { useStaking } from "@/lib/context/StakingContext";
 
 /**
  * Format d'une entrée de données pour le graphique d'epochs par wallet.
@@ -43,7 +44,6 @@ export interface IWalletEpochChartData {
 
 interface IProviderEpochChartProps {
   epochWalletData: IWalletEpochChartData[];
-  walletColorMap: Record<string, string>;
   providerName: string;
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
@@ -56,13 +56,15 @@ interface IProviderEpochChartProps {
  */
 export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   epochWalletData,
-  walletColorMap,
   providerName,
   chartType,
   displayMode,
   className,
   viewMode = 'rewards',
 }) => {
+  // Utilise le contexte pour obtenir les couleurs
+  const { state: { walletColorMap } } = useStaking();
+
   // Si pas de données, afficher un message
   if (!epochWalletData || epochWalletData.length === 0) {
     return (

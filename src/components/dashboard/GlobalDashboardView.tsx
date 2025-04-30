@@ -12,10 +12,10 @@ import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assuming types exist
 import { GlobalEpochChart, GlobalStakedChart } from '@/components/charts';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon, CoinsIcon, WalletIcon } from "lucide-react";
+import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
 import { WalletPercentBar } from './WalletPercentBar';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
@@ -25,11 +25,6 @@ interface IGlobalDashboardViewProps {
     walletColorMap: Record<string, string>;
     className?: string;
 }
-
-// Define chart types and modes
-type ChartType = 'bar' | 'line';
-type DisplayMode = 'daily' | 'cumulative';
-type ViewMode = 'rewards' | 'staked';
 
 /**
  * Displays an overview dashboard aggregating data across all providers.
@@ -45,10 +40,35 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     const [chartType, setChartType] = useState<ChartType>('bar');
     const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
     const [viewMode, setViewMode] = useState<ViewMode>('rewards');
+    const [showLoading, setShowLoading] = useState(false);
+
+    if (showLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full">
+                <FunLoadingMessages />
+                <Button 
+                    variant="outline"
+                    className="mt-8"
+                    onClick={() => setShowLoading(false)}
+                >
+                    Retour au dashboard
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className={cn('flex flex-col space-y-6 p-4 md:p-6 h-full', className)}>
-            <h2 className="text-2xl font-bold">All Providers Overview</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">All Providers Overview</h2>
+                {/* Bouton temporaire pour tester le loading */}
+                <Button 
+                    variant="outline"
+                    onClick={() => setShowLoading(true)}
+                >
+                    Test Loading Animation
+                </Button>
+            </div>
 
             {/* Stats Section */}
             <Card className="bg-card/80 border-border/50 flex-shrink-0">
@@ -62,11 +82,6 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         <p className="text-muted-foreground mb-1">Total Rewarded</p>
                         <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.totalRewards)}</p>
                     </div>
-                    {/* Avg Per Epoch - Removing as not available */}
-                    {/* <div className="border-b sm:border-b-0 lg:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
-                        <p className="text-muted-foreground mb-1">Avg Per Epoch (All Time)</p>
-                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avgOverall)}</p>
-                    </div> */}
                     {/* Last 7 Epochs */}
                     <div className="border-b sm:border-b-0 sm:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
                         <p className="text-muted-foreground mb-1">Last 7 Epochs Avg</p>
@@ -102,100 +117,23 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                             }
                         </CardDescription>
                     </div>
-                    <div className="flex gap-2">
-                        {/* View Mode Toggle */}
-                        <ToggleGroup
-                            type="single"
-                            variant="outline"
-                            value={viewMode}
-                            onValueChange={(value: ViewMode) => { if (value) setViewMode(value); }}
-                            size="sm"
-                            aria-label="View Mode"
-                        >
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <ToggleGroupItem value="rewards" aria-label="Show rewards">
-                                  <CoinsIcon className="h-4 w-4" />
-                                </ToggleGroupItem>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">Show rewards per epoch</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <ToggleGroupItem value="staked" aria-label="Show staked amount">
-                                  <WalletIcon className="h-4 w-4" />
-                                </ToggleGroupItem>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">Show staked amount per epoch</TooltipContent>
-                            </Tooltip>
-                        </ToggleGroup>
-
-                        {/* Only show these toggles for rewards view */}
-                        {viewMode === 'rewards' && (
-                            <>
-                                <ToggleGroup
-                                    type="single"
-                                    variant="outline"
-                                    value={displayMode}
-                                    onValueChange={(value: DisplayMode) => { if (value) setDisplayMode(value); }}
-                                    size="sm"
-                                    aria-label="Display Mode"
-                                >
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <ToggleGroupItem value="daily" aria-label="Daily rewards">
-                                          <CalendarIcon className="h-4 w-4" />
-                                        </ToggleGroupItem>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">Show daily values</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <ToggleGroupItem value="cumulative" aria-label="Cumulative rewards">
-                                          <TrendingUpIcon className="h-4 w-4" />
-                                        </ToggleGroupItem>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">Show cumulative values</TooltipContent>
-                                    </Tooltip>
-                                </ToggleGroup>
-                                <ToggleGroup 
-                                    type="single" 
-                                    variant="outline"
-                                    value={chartType}
-                                    onValueChange={(value: ChartType) => { if (value) setChartType(value); }}
-                                    size="sm"
-                                    aria-label="Chart Type"
-                                >
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <ToggleGroupItem value="bar" aria-label="Bar chart">
-                                          <BarChartIcon className="h-4 w-4" />
-                                        </ToggleGroupItem>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">Bar chart</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <ToggleGroupItem value="line" aria-label="Line chart">
-                                          <LineChartIcon className="h-4 w-4" />
-                                        </ToggleGroupItem>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">Line chart</TooltipContent>
-                                    </Tooltip>
-                                </ToggleGroup>
-                            </>
-                        )}
-                    </div>
+                    <ChartToggles
+                        viewMode={viewMode}
+                        displayMode={displayMode}
+                        chartType={chartType}
+                        onViewModeChange={(value) => setViewMode(value)}
+                        onDisplayModeChange={(value) => setDisplayMode(value)}
+                        onChartTypeChange={(value) => setChartType(value)}
+                    />
                 </CardHeader>
                 <CardContent className="flex-grow p-2">
                     {viewMode === 'rewards' ? (
                         <GlobalEpochChart 
                             aggregatedEpochData={aggregatedEpochData}
                             epochWalletData={epochWalletData}
-                            walletColorMap={walletColorMap}
                             chartType={chartType}
                             displayMode={displayMode}
-                            className="h-[450px] min-h-[450px]"
+                            className="mt-4"
                         />
                     ) : (
                         <GlobalStakedChart 
