@@ -290,3 +290,38 @@ export function aggregateProviderEpochDataByWallet(
     .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
     .sort((a, b) => a.epoch - b.epoch);
 }
+
+/**
+ * Agrège les montants stakés par wallet pour chaque epoch.
+ * @param allProvidersData - Record<provider, IEpochRewardData[]>
+ * @param providerOwners - mapping provider -> owner
+ * @param selectedAddresses - adresses sélectionnées
+ * @returns Array<{ epoch, [wallet]: montant }>
+ */
+export function aggregateStakingDataByWallet(
+  allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
+  providerOwners: Record<string, string>,
+  selectedAddresses: string[]
+): Array<{ epoch: number; [wallet: string]: number }> {
+  if (!allProvidersData || selectedAddresses.length === 0) return [];
+
+  const epochWalletMap: Map<number, Record<string, number>> = new Map();
+
+  Object.entries(allProvidersData).forEach(([providerAddress, epochDataArray]) => {
+    epochDataArray.forEach(epochData => {
+      const wallet = epochData.walletAddress;
+      if (selectedAddresses.includes(wallet)) {
+        if (!epochWalletMap.has(epochData.epoch)) {
+          epochWalletMap.set(epochData.epoch, {});
+        }
+        const walletMap = epochWalletMap.get(epochData.epoch)!;
+        // Ajouter le montant staké pour ce wallet à cet epoch
+        walletMap[wallet] = (walletMap[wallet] || 0) + (epochData.totalStaked || 0);
+      }
+    });
+  });
+
+  return Array.from(epochWalletMap.entries())
+    .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+    .sort((a, b) => a.epoch - b.epoch);
+}

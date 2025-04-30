@@ -31,7 +31,7 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { MenuIcon } from 'lucide-react';
-import { aggregateAllEpochData, calculateGlobalStats, aggregateEpochDataByWallet } from '@/lib/utils/calculationUtils';
+import { aggregateAllEpochData, calculateGlobalStats, aggregateEpochDataByWallet, aggregateStakingDataByWallet } from '@/lib/utils/calculationUtils';
 import { IProviderWithIdentity, IEpochRewardData, IXoxnoUserRewardsResponse } from '@/api/types/xoxno-rewards.types';
 import {
     Card, 
@@ -97,7 +97,7 @@ export default function HomePage(): React.ReactElement {
            return acc;
        }, {} as Record<string, boolean>);
    }, [selectedAddresses, isLoading]);
-  const { globalStats, aggregatedEpochData, epochWalletData, walletColorMap, allProvidersData, allProviderOwners } = useMemo(() => {
+  const { globalStats, aggregatedEpochData, epochWalletData, stakingData, walletColorMap, allProvidersData, allProviderOwners } = useMemo(() => {
       
       // Use the refined loading states
       const isLoadingAnySelected = selectedAddresses.some(addr => relevantLoadingStates[addr]);
@@ -108,7 +108,7 @@ export default function HomePage(): React.ReactElement {
       // Wait until loading is complete for all selected addresses
       if (selectedAddresses.length === 0 || isLoadingAnySelected || !hasDataForAllSelected) {
           // Return null/empty state while loading or if data isn't ready
-          return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} }; 
+          return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], stakingData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} }; 
       }
       
       // --- Proceed with calculation only if all data is ready ---
@@ -133,7 +133,7 @@ export default function HomePage(): React.ReactElement {
       });
       
       if (!providerDataFound) {
-        return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} };
+        return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], stakingData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} };
       }
       
       const aggData = aggregateAllEpochData(
@@ -146,11 +146,16 @@ export default function HomePage(): React.ReactElement {
           allProviderOwners,
           selectedAddresses
       );
+      const stakingData = aggregateStakingDataByWallet(
+          allProvidersData,
+          allProviderOwners,
+          selectedAddresses
+      );
       const walletColorMap = getWalletColorMap(selectedAddresses, CHART_COLORS.categorical);
       const stats = calculateGlobalStats(aggData);
 
 
-      return { globalStats: stats, aggregatedEpochData: aggData, epochWalletData, walletColorMap, allProvidersData, allProviderOwners };
+      return { globalStats: stats, aggregatedEpochData: aggData, epochWalletData, stakingData, walletColorMap, allProvidersData, allProviderOwners };
 
   }, [selectedAddresses, relevantRewardsData, relevantLoadingStates]); // Use refined dependencies
 
@@ -202,6 +207,7 @@ export default function HomePage(): React.ReactElement {
                                globalStats={globalStats}
                                aggregatedEpochData={aggregatedEpochData}
                                epochWalletData={epochWalletData}
+                               stakingData={stakingData}
                                walletColorMap={walletColorMap}
                            />
                        ) : (

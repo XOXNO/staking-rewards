@@ -25,10 +25,11 @@ import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon } from "lucide-react";
+import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon, CoinsIcon, WalletIcon } from "lucide-react";
 import { getWalletColorMap } from '@/lib/utils/utils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletPercentBar } from './WalletPercentBar';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface IProviderDetailViewProps {
   selectedAddresses: string[];
@@ -41,6 +42,7 @@ interface IProviderDetailViewProps {
 // Define chart type
 type ChartType = "bar" | "line";
 type DisplayMode = "daily" | "cumulative";
+type ViewMode = 'rewards' | 'staked';
 
 // Define a matching type here or import if defined globally
 interface IAggregatedProviderEpoch {
@@ -63,6 +65,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
 }) => {
   const [chartType, setChartType] = useState<ChartType>("bar");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("daily");
+  const [viewMode, setViewMode] = useState<ViewMode>('rewards');
 
   // 1. Find Provider Identity (find from first available response for simplicity for now)
   let providerIdentity: IProviderWithIdentity | undefined;
@@ -89,6 +92,29 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
       if (owner) providerOwners[selectedProviderAddress] = owner;
     });
     return aggregateProviderEpochDataByWallet(allProvidersData, providerOwners, selectedAddresses, selectedProviderAddress);
+  }, [fullRewardsData, selectedAddresses, selectedProviderAddress]);
+
+  // Ajout : données de staking par epoch et wallet pour ce provider
+  const providerStakingWalletData = useMemo(() => {
+    // On réutilise la logique d'aggregation, mais pour le montant staké
+    const allProvidersData: Record<string, any[]> = {};
+    const providerOwners: Record<string, string> = {};
+    selectedAddresses.forEach(addr => {
+      const rewards = fullRewardsData[addr]?.providersFullRewardsData?.[selectedProviderAddress];
+      if (rewards) {
+        if (!allProvidersData[selectedProviderAddress]) allProvidersData[selectedProviderAddress] = [];
+        allProvidersData[selectedProviderAddress].push(...rewards.map(epoch => ({ ...epoch, walletAddress: addr })));
+      }
+      const owner = fullRewardsData[addr]?.providersWithIdentityInfo?.find(p => p.provider === selectedProviderAddress)?.owner;
+      if (owner) providerOwners[selectedProviderAddress] = owner;
+    });
+    // Agrégation du montant staké par wallet et epoch
+    // On ne filtre pas sur les rewards, mais on additionne totalStaked
+    // On adapte la fonction d'aggregation pour le staking
+    // On réutilise aggregateStakingDataByWallet
+    // (import à ajouter si besoin)
+    // @ts-ignore
+    return require('@/lib/utils/calculationUtils').aggregateStakingDataByWallet(allProvidersData, providerOwners, selectedAddresses);
   }, [fullRewardsData, selectedAddresses, selectedProviderAddress]);
 
   // Mapping wallet -> couleur (palette catégorielle)
@@ -263,59 +289,129 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
       <Card className="bg-card/80 border-border/50 flex flex-col flex-grow overflow-hidden">
         <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
-            <CardTitle>Epoch Rewards Chart</CardTitle>
+            <CardTitle>
+              {viewMode === 'rewards' ? 'Epoch Rewards Chart' : 'Epoch Staked Amount Chart'}
+            </CardTitle>
             <CardDescription>
-              {displayMode === "daily" ? "Daily rewards" : "Cumulative rewards"} received per epoch from this provider.
+              {viewMode === 'rewards'
+                ? (displayMode === "daily" ? "Daily rewards" : "Cumulative rewards") + " received per epoch from this provider."
+                : "Total amount staked across selected wallets per epoch for this provider."}
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            {/* Toggle pour rewards/staked */}
             <ToggleGroup
               type="single"
               variant="outline"
-              value={displayMode}
-              onValueChange={(value: DisplayMode) => {
-                if (value) setDisplayMode(value);
-              }}
+              value={viewMode}
+              onValueChange={(value: ViewMode) => { if (value) setViewMode(value); }}
               size="sm"
-              aria-label="Display Mode"
+              aria-label="View Mode"
             >
-              <ToggleGroupItem value="daily" aria-label="Daily rewards">
-                <CalendarIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="cumulative" aria-label="Cumulative rewards">
-                <TrendingUpIcon className="h-4 w-4" />
-              </ToggleGroupItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="rewards" aria-label="Show rewards">
+                    <CoinsIcon className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="top">Show rewards per epoch</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="staked" aria-label="Show staked amount">
+                    <WalletIcon className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="top">Show staked amount per epoch</TooltipContent>
+              </Tooltip>
             </ToggleGroup>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={chartType}
-              onValueChange={(value: ChartType) => {
-                if (value) setChartType(value);
-              }}
-              size="sm"
-              aria-label="Chart Type"
-            >
-              <ToggleGroupItem value="bar" aria-label="Bar chart">
-                <BarChartIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="line" aria-label="Line chart">
-                <LineChartIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+            {/* Les toggles displayMode et chartType seulement pour rewards */}
+            {viewMode === 'rewards' && (
+              <>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={displayMode}
+                  onValueChange={(value: DisplayMode) => {
+                    if (value) setDisplayMode(value);
+                  }}
+                  size="sm"
+                  aria-label="Display Mode"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="daily" aria-label="Daily rewards">
+                        <CalendarIcon className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Show daily values</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="cumulative" aria-label="Cumulative rewards">
+                        <TrendingUpIcon className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Show cumulative values</TooltipContent>
+                  </Tooltip>
+                </ToggleGroup>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={chartType}
+                  onValueChange={(value: ChartType) => {
+                    if (value) setChartType(value);
+                  }}
+                  size="sm"
+                  aria-label="Chart Type"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="bar" aria-label="Bar chart">
+                        <BarChartIcon className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Bar chart</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="line" aria-label="Line chart">
+                        <LineChartIcon className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Line chart</TooltipContent>
+                  </Tooltip>
+                </ToggleGroup>
+              </>
+            )}
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-2">
-          <ProviderEpochChart
-            epochWalletData={providerEpochWalletData}
-            walletColorMap={walletColorMap}
-            providerName={
-              providerIdentity.identityInfo?.name || providerIdentity.provider
-            }
-            chartType={chartType}
-            displayMode={displayMode}
-            className="h-[450px] min-h-[450px]"
-          />
+          {viewMode === 'rewards' ? (
+            <ProviderEpochChart
+              epochWalletData={providerEpochWalletData}
+              walletColorMap={walletColorMap}
+              providerName={
+                providerIdentity.identityInfo?.name || providerIdentity.provider
+              }
+              chartType={chartType}
+              displayMode={displayMode}
+              viewMode={viewMode}
+              className="h-[450px] min-h-[450px]"
+            />
+          ) : (
+            <ProviderEpochChart
+              epochWalletData={providerStakingWalletData}
+              walletColorMap={walletColorMap}
+              providerName={
+                providerIdentity.identityInfo?.name || providerIdentity.provider
+              }
+              chartType={"line"}
+              displayMode={"daily"}
+              viewMode={viewMode}
+              className="h-[450px] min-h-[450px]"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -76,7 +76,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
   }, 0);
 
   // Calculer la date à partir de l'epoch (24 heures par epoch)
-  const epochStartDate = new Date('2020-07-30T15:00:00Z'); // Date de début des epochs MultiversX
+  const epochStartDate = new Date('2020-07-30T15:00:00Z');
   const epochDuration = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
   const epochDate = new Date(epochStartDate.getTime() + (Number(label) * epochDuration));
   const formattedDate = epochDate.toLocaleDateString('fr-FR', {
@@ -84,6 +84,15 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
     month: '2-digit',
     year: '2-digit'
   });
+
+  // Fonction utilitaire pour formater un nombre avec 6 décimales max
+  const formatNumber = (amount: number): string => {
+    const fixedAmount = amount.toFixed(6);
+    return parseFloat(fixedAmount).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+  };
 
   return (
     <div 
@@ -105,7 +114,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span>Total:</span>
-          <span className="font-bold text-foreground">{formatEgld(total)} EGLD</span>
+          <span className="font-bold text-foreground">{formatNumber(total)} EGLD</span>
         </div>
       </div>
       <div className="space-y-1.5">
@@ -120,7 +129,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
                 style={{ backgroundColor: color }}
               />
               <span className="font-medium" style={{ color }}>
-                {formatEgld(value)}
+                {formatNumber(value)}
               </span>
               <span className="text-muted-foreground text-sm">({shortenAddress(wallet)})</span>
             </div>

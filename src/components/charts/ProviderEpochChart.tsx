@@ -48,6 +48,7 @@ interface IProviderEpochChartProps {
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
   className?: string;
+  viewMode?: 'rewards' | 'staked';
 }
 
 /**
@@ -60,6 +61,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   chartType,
   displayMode,
   className,
+  viewMode = 'rewards',
 }) => {
   // Si pas de données, afficher un message
   if (!epochWalletData || epochWalletData.length === 0) {
@@ -70,7 +72,9 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
           className
         )}
       >
-        No epoch data available for {providerName}.
+        {viewMode === 'staked'
+          ? `No staked amount data available for ${providerName}.`
+          : `No epoch data available for ${providerName}.`}
       </div>
     );
   }
