@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 
 interface IColorDotPickerProps {
@@ -9,9 +9,26 @@ interface IColorDotPickerProps {
 
 export const ColorDotPicker: React.FC<IColorDotPickerProps> = ({ color, onChange, size = 18 }) => {
   const [open, setOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open]);
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={pickerRef} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         type="button"
         aria-label="Change wallet color"

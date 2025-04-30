@@ -1,1 +1,0 @@
-// Fichier intentionnellement vide - Les fonctions ont été déplacées vers chartUtils.ts 

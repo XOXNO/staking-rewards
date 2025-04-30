@@ -27,7 +27,7 @@ import { ProviderEpochChart } from "@/components/charts";
 import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
 import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
-import { WalletPercentBar } from './WalletPercentBar';
+import { WalletDistribution } from './WalletDistribution';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
@@ -153,8 +153,8 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <FunLoadingMessages />
+      <div className="flex-1 flex items-center justify-center">
+        <FunLoadingMessages spacing="large" />
       </div>
     );
   }
@@ -237,10 +237,9 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
           </div>
         </CardContent>
         {selectedAddresses.length > 1 && (
-          <WalletPercentBar
+          <WalletDistribution
             walletAmounts={walletTotals}
-            walletColorMap={walletColorMap}
-            className="mb-2"
+            className="pb-3"
           />
         )}
       </Card>

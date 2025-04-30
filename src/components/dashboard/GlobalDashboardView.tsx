@@ -44,8 +44,8 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center h-full">
-                <FunLoadingMessages />
+            <div className="flex-1 flex items-center justify-center">
+                <FunLoadingMessages spacing="large" />
             </div>
         );
     }
@@ -124,7 +124,6 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                     ) : (
                         <GlobalStakedChart 
                             stakingData={stakingData}
-                            walletColorMap={walletColorMap}
                             className="h-[450px] min-h-[450px]"
                         />
                     )}

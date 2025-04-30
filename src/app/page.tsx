@@ -13,7 +13,8 @@ import {
     PieChart, 
     DatabaseZap, 
     CheckCircle, 
-    TrendingUp
+    TrendingUp,
+    MenuIcon
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,6 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import { MenuIcon } from 'lucide-react';
 import { aggregateAllEpochData, calculateGlobalStats, aggregateEpochDataByWallet, aggregateStakingDataByWallet } from '@/lib/utils/calculationUtils';
 import { IProviderWithIdentity, IEpochRewardData, IXoxnoUserRewardsResponse } from '@/api/types/xoxno-rewards.types';
 import {

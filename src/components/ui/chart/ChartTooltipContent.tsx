@@ -69,8 +69,16 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
 
   if (!active || !payload || payload.length === 0) return null;
 
-  // Calculer le total des valeurs
-  const total = payload.reduce((sum, entry) => {
+  // Filtrer les entrées avec des valeurs non nulles
+  const nonZeroPayload = payload.filter(entry => {
+    const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
+    return value > 0;
+  });
+
+  if (nonZeroPayload.length === 0) return null;
+
+  // Calculer le total des valeurs non nulles
+  const total = nonZeroPayload.reduce((sum, entry) => {
     const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
     return sum + value;
   }, 0);
@@ -124,7 +132,8 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
         </div>
       </div>
       
-      {payload.map((entry) => {
+      {/* N'afficher que les wallets avec des valeurs non nulles */}
+      {nonZeroPayload.map(entry => {
         const wallet = typeof entry.name === 'string' ? entry.name : '';
         const color = wallet ? walletColorMap[wallet] : '#888';
         const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);

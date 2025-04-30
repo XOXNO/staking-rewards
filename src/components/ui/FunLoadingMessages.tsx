@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface IFunLoadingMessagesProps {
     className?: string;
     mainMessage?: string;
+    spacing?: 'default' | 'large';
 }
 
 const funMessages = [
@@ -80,7 +81,8 @@ const AnimatedLetters = ({ text }: { text: string }) => {
 
 export const FunLoadingMessages: React.FC<IFunLoadingMessagesProps> = ({
     className,
-    mainMessage = "Calculating global overview..."
+    mainMessage = "Calculating global overview...",
+    spacing = 'default'
 }) => {
     const [currentMessage, setCurrentMessage] = useState(() => getRandomMessage(null));
     const [key, setKey] = useState(0);
@@ -96,9 +98,13 @@ export const FunLoadingMessages: React.FC<IFunLoadingMessagesProps> = ({
     }, [updateMessage]);
 
     return (
-        <div className={cn('flex flex-col items-center justify-center space-y-6', className)}>
+        <div className={cn(
+            'flex flex-col items-center justify-center min-h-[50vh]',
+            spacing === 'large' && 'min-h-[70vh]',
+            className
+        )}>
             {/* Spinner autour du texte Loading */}
-            <div className="relative w-32 h-32 flex items-center justify-center">
+            <div className="relative w-32 h-32 flex items-center justify-center mb-8">
                 <Loader2 className="absolute w-full h-full animate-spin text-primary opacity-20" />
                 <span className="text-base font-medium text-foreground/90">
                     Loading...
