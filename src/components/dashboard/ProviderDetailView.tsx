@@ -25,7 +25,7 @@ import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BarChartIcon, LineChartIcon } from "lucide-react";
+import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon } from "lucide-react";
 import { getWalletColorMap } from '@/lib/utils/utils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletPercentBar } from './WalletPercentBar';
@@ -40,6 +40,7 @@ interface IProviderDetailViewProps {
 
 // Define chart type
 type ChartType = "bar" | "line";
+type DisplayMode = "daily" | "cumulative";
 
 // Define a matching type here or import if defined globally
 interface IAggregatedProviderEpoch {
@@ -61,6 +62,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
   className,
 }) => {
   const [chartType, setChartType] = useState<ChartType>("bar");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("daily");
 
   // 1. Find Provider Identity (find from first available response for simplicity for now)
   let providerIdentity: IProviderWithIdentity | undefined;
@@ -263,26 +265,45 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
           <div>
             <CardTitle>Epoch Rewards Chart</CardTitle>
             <CardDescription>
-              Rewards received per epoch from this provider.
+              {displayMode === "daily" ? "Daily rewards" : "Cumulative rewards"} received per epoch from this provider.
             </CardDescription>
           </div>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            value={chartType}
-            onValueChange={(value: ChartType) => {
-              if (value) setChartType(value);
-            }}
-            size="sm"
-            aria-label="Chart Type"
-          >
-            <ToggleGroupItem value="bar" aria-label="Bar chart">
-              <BarChartIcon className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="line" aria-label="Line chart">
-              <LineChartIcon className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex gap-2">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={displayMode}
+              onValueChange={(value: DisplayMode) => {
+                if (value) setDisplayMode(value);
+              }}
+              size="sm"
+              aria-label="Display Mode"
+            >
+              <ToggleGroupItem value="daily" aria-label="Daily rewards">
+                <CalendarIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="cumulative" aria-label="Cumulative rewards">
+                <TrendingUpIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={chartType}
+              onValueChange={(value: ChartType) => {
+                if (value) setChartType(value);
+              }}
+              size="sm"
+              aria-label="Chart Type"
+            >
+              <ToggleGroupItem value="bar" aria-label="Bar chart">
+                <BarChartIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="line" aria-label="Line chart">
+                <LineChartIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </CardHeader>
         <CardContent className="flex-grow p-2">
           <ProviderEpochChart
@@ -292,6 +313,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               providerIdentity.identityInfo?.name || providerIdentity.provider
             }
             chartType={chartType}
+            displayMode={displayMode}
             className="h-[450px] min-h-[450px]"
           />
         </CardContent>

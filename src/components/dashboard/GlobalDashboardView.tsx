@@ -13,7 +13,7 @@ import { formatEgld } from '@/lib/utils/formatters';
 import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assuming types exist
 import { GlobalEpochChart } from '@/components/charts';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BarChartIcon, LineChartIcon } from "lucide-react";
+import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon } from "lucide-react";
 import { WalletPercentBar } from './WalletPercentBar';
 
 interface IGlobalDashboardViewProps {
@@ -24,8 +24,9 @@ interface IGlobalDashboardViewProps {
     className?: string;
 }
 
-// Define chart type
+// Define chart types
 type ChartType = 'bar' | 'line';
+type DisplayMode = 'daily' | 'cumulative';
 
 /**
  * Displays an overview dashboard aggregating data across all providers.
@@ -38,6 +39,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     className,
 }) => {
     const [chartType, setChartType] = useState<ChartType>('bar');
+    const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
 
     return (
         <div className={cn('flex flex-col space-y-6 p-4 md:p-6 h-full', className)}>
@@ -86,23 +88,42 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                 <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-2">
                     <div>
                         <CardTitle>Total Rewards Per Epoch</CardTitle>
-                        <CardDescription>Sum of rewards from all selected wallets per epoch.</CardDescription>
+                        <CardDescription>
+                            {displayMode === "daily" ? "Daily rewards" : "Cumulative rewards"} from all selected wallets per epoch.
+                        </CardDescription>
                     </div>
-                    <ToggleGroup 
-                        type="single" 
-                        variant="outline"
-                        value={chartType}
-                        onValueChange={(value: ChartType) => { if (value) setChartType(value); }}
-                        size="sm"
-                        aria-label="Chart Type"
-                    >
-                        <ToggleGroupItem value="bar" aria-label="Bar chart">
-                            <BarChartIcon className="h-4 w-4" />
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="line" aria-label="Line chart">
-                            <LineChartIcon className="h-4 w-4" />
-                        </ToggleGroupItem>
-                    </ToggleGroup>
+                    <div className="flex gap-2">
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            value={displayMode}
+                            onValueChange={(value: DisplayMode) => { if (value) setDisplayMode(value); }}
+                            size="sm"
+                            aria-label="Display Mode"
+                        >
+                            <ToggleGroupItem value="daily" aria-label="Daily rewards">
+                                <CalendarIcon className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="cumulative" aria-label="Cumulative rewards">
+                                <TrendingUpIcon className="h-4 w-4" />
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                        <ToggleGroup 
+                            type="single" 
+                            variant="outline"
+                            value={chartType}
+                            onValueChange={(value: ChartType) => { if (value) setChartType(value); }}
+                            size="sm"
+                            aria-label="Chart Type"
+                        >
+                            <ToggleGroupItem value="bar" aria-label="Bar chart">
+                                <BarChartIcon className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="line" aria-label="Line chart">
+                                <LineChartIcon className="h-4 w-4" />
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                    </div>
                 </CardHeader>
                 <CardContent className="flex-grow p-2">
                     <GlobalEpochChart 
@@ -110,6 +131,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         epochWalletData={epochWalletData}
                         walletColorMap={walletColorMap}
                         chartType={chartType}
+                        displayMode={displayMode}
                         className="h-[450px] min-h-[450px]"
                     />
                 </CardContent>
