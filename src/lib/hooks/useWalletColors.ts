@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
-import { getWalletColorMap } from '@/lib/utils/utils';
+import { getWalletColorMap } from '@/lib/utils/chartUtils';
 
 const STORAGE_KEY = 'wallet-colors';
 
@@ -10,31 +10,27 @@ export interface UseWalletColorsReturn {
   resetWalletColors: () => void;
 }
 
-// Fonction utilitaire pour accéder au localStorage de manière sûre
-const getStorageValue = (key: string): Record<string, string> | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+// Fonction utilitaire pour obtenir les couleurs sauvegardées
+function getStorageValue(key: string): Record<string, string> | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const item = localStorage.getItem(key);
+    const item = window.localStorage.getItem(key);
     return item ? JSON.parse(item) : null;
   } catch (error) {
     console.error('Error reading from localStorage:', error);
     return null;
   }
-};
+}
 
-// Fonction utilitaire pour sauvegarder dans le localStorage de manière sûre
-const setStorageValue = (key: string, value: Record<string, string>): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
+// Fonction utilitaire pour sauvegarder les couleurs
+function setStorageValue(key: string, value: Record<string, string>): void {
+  if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
     console.error('Error writing to localStorage:', error);
   }
-};
+}
 
 export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
   // État local pour le mapping wallet -> couleur
@@ -51,19 +47,13 @@ export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
   // Met à jour le mapping quand la liste d'adresses change
   useEffect(() => {
     setWalletColorMap(prev => {
-      // Génère un nouveau mapping automatique
-      const autoMap = getWalletColorMap(addresses, CHART_COLORS.categorical);
+      // Génère un nouveau mapping en tenant compte des couleurs existantes
+      const newColorMap = getWalletColorMap(addresses, CHART_COLORS.categorical, prev);
       
-      // Fusionne avec les couleurs existantes
-      const merged: Record<string, string> = {};
-      addresses.forEach(addr => {
-        merged[addr] = prev[addr] || autoMap[addr];
-      });
-
       // Sauvegarde dans le localStorage
-      setStorageValue(STORAGE_KEY, merged);
+      setStorageValue(STORAGE_KEY, newColorMap);
       
-      return merged;
+      return newColorMap;
     });
   }, [addresses]);
 
@@ -78,9 +68,9 @@ export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
 
   // Fonction pour réinitialiser toutes les couleurs
   const resetWalletColors = () => {
-    const autoMap = getWalletColorMap(addresses, CHART_COLORS.categorical);
-    setStorageValue(STORAGE_KEY, autoMap);
-    setWalletColorMap(autoMap);
+    const newColorMap = getWalletColorMap(addresses, CHART_COLORS.categorical);
+    setStorageValue(STORAGE_KEY, newColorMap);
+    setWalletColorMap(newColorMap);
   };
 
   return {

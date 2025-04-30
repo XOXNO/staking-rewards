@@ -43,7 +43,7 @@ import {
 import { AddWalletDialog } from '@/components/dashboard/AddWalletDialog';
 import { AddWalletForm } from '@/components/dashboard/WalletInputForm/WalletInputForm';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
-import { getWalletColorMap } from '@/lib/utils/utils';
+import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 

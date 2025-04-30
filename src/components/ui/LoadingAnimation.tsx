@@ -27,16 +27,22 @@ interface ILoadingAnimationProps {
 export const LoadingAnimation: React.FC<ILoadingAnimationProps> = ({
     message = 'Loading...',
     className,
-    lottieClassName = 'w-40 h-40', // Default size
+    lottieClassName = 'w-32 h-32', // Reduced size
 }) => {
     return (
-        <div className={cn('flex flex-col items-center justify-center text-center', className)}>
-            <Lottie 
-                animationData={loadingAnimationData} 
-                loop={true} 
-                className={lottieClassName}
-            />
-            {message && <p className="text-lg text-muted-foreground mt-4">{message}</p>}
+        <div className={cn('flex flex-col items-center justify-center h-full -mt-8', className)}>
+            <div className="flex flex-col items-center">
+                <Lottie 
+                    animationData={loadingAnimationData} 
+                    loop={true} 
+                    className={lottieClassName}
+                />
+                {message && (
+                    <p className="text-lg text-muted-foreground -mt-4">
+                        {message}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }; 

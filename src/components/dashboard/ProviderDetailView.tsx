@@ -25,10 +25,11 @@ import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
-import { getWalletColorMap } from '@/lib/utils/utils';
+import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletPercentBar } from './WalletPercentBar';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 interface IProviderDetailViewProps {
   selectedAddresses: string[];
@@ -36,6 +37,7 @@ interface IProviderDetailViewProps {
   selectedProviderAddress: string;
   currentEpoch: number;
   className?: string;
+  isLoading?: boolean;
 }
 
 interface IAggregatedProviderEpoch {
@@ -51,6 +53,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
   selectedProviderAddress,
   currentEpoch,
   className,
+  isLoading = false,
 }) => {
   // 1. Tous les hooks d'état en premier
   const [chartType, setChartType] = useState<ChartType>("bar");
@@ -148,7 +151,15 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
     return totals;
   }, [selectedAddresses, fullRewardsData, selectedProviderAddress]);
 
-  // Maintenant on peut faire le return conditionnel
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <FunLoadingMessages />
+      </div>
+    );
+  }
+
+  // Maintenant on peut faire le return conditionnel pour les données manquantes
   if (!providerIdentity) {
     return (
       <div className={cn("flex items-center justify-center h-full text-muted-foreground p-4 text-center", className)}>

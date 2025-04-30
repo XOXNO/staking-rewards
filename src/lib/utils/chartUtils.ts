@@ -31,4 +31,43 @@ export function calculateCumulativeData(
   });
 
   return cumulativeData;
+}
+
+/**
+ * Trouve une couleur non utilisée dans la palette.
+ * @param usedColors Set des couleurs déjà utilisées
+ * @param palette Tableau des couleurs disponibles
+ * @returns Une couleur non utilisée ou la première couleur si toutes sont utilisées
+ */
+export function findUnusedColor(usedColors: Set<string>, palette: string[]): string {
+  // Cherche une couleur non utilisée
+  const unusedColor = palette.find(color => !usedColors.has(color));
+  // Si toutes les couleurs sont utilisées, retourne la première couleur
+  return unusedColor || palette[0];
+}
+
+/**
+ * Génère un mapping wallet -> couleur à partir d'une liste de wallets et d'une palette de couleurs.
+ * @param wallets Liste des adresses de wallets
+ * @param palette Tableau de couleurs hexadécimales
+ * @param existingColorMap Mapping existant des couleurs (optionnel)
+ * @returns Un objet { [wallet]: couleur }
+ */
+export function getWalletColorMap(
+  wallets: string[], 
+  palette: string[],
+  existingColorMap: Record<string, string> = {}
+): Record<string, string> {
+  const colorMap: Record<string, string> = { ...existingColorMap };
+  const usedColors = new Set(Object.values(colorMap));
+
+  wallets.forEach(wallet => {
+    // Si le wallet n'a pas déjà une couleur, lui en attribuer une non utilisée
+    if (!colorMap[wallet]) {
+      colorMap[wallet] = findUnusedColor(usedColors, palette);
+      usedColors.add(colorMap[wallet]);
+    }
+  });
+
+  return colorMap;
 } 

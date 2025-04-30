@@ -94,6 +94,12 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
     });
   };
 
+  // Fonction pour formater le pourcentage
+  const formatPercentage = (value: number, total: number): string => {
+    const percentage = (value / total) * 100;
+    return percentage.toFixed(1) + '%';
+  };
+
   return (
     <div 
       ref={tooltipRef}
@@ -117,13 +123,16 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
           <span className="font-bold text-foreground">{formatNumber(total)} EGLD</span>
         </div>
       </div>
-      <div className="space-y-1.5">
-        {payload.map((entry) => {
-          const wallet = typeof entry.name === 'string' ? entry.name : '';
-          const color = wallet ? walletColorMap[wallet] : '#888';
-          const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
-          return (
-            <div key={wallet} className="flex items-center gap-2">
+      
+      {payload.map((entry) => {
+        const wallet = typeof entry.name === 'string' ? entry.name : '';
+        const color = wallet ? walletColorMap[wallet] : '#888';
+        const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
+        const percentage = formatPercentage(value, total);
+        
+        return (
+          <div key={wallet} className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
               <span
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: color }}
@@ -131,11 +140,18 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
               <span className="font-medium" style={{ color }}>
                 {formatNumber(value)}
               </span>
-              <span className="text-muted-foreground text-sm">({shortenAddress(wallet)})</span>
             </div>
-          );
-        })}
-      </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">
+                {shortenAddress(wallet)}
+              </span>
+              <span className="text-sm font-medium" style={{ color }}>
+                ({percentage})
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -14,7 +14,6 @@ import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assum
 import { GlobalEpochChart, GlobalStakedChart } from '@/components/charts';
 import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
 import { WalletPercentBar } from './WalletPercentBar';
-import { Button } from '@/components/ui/button';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 interface IGlobalDashboardViewProps {
@@ -24,6 +23,7 @@ interface IGlobalDashboardViewProps {
     stakingData: Array<{ epoch: number; [wallet: string]: number }>;  // Données de staking par epoch et par wallet
     walletColorMap: Record<string, string>;
     className?: string;
+    isLoading?: boolean;
 }
 
 /**
@@ -36,23 +36,16 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     stakingData,
     walletColorMap,
     className,
+    isLoading = false,
 }) => {
     const [chartType, setChartType] = useState<ChartType>('bar');
     const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
     const [viewMode, setViewMode] = useState<ViewMode>('rewards');
-    const [showLoading, setShowLoading] = useState(false);
 
-    if (showLoading) {
+    if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-full">
                 <FunLoadingMessages />
-                <Button 
-                    variant="outline"
-                    className="mt-8"
-                    onClick={() => setShowLoading(false)}
-                >
-                    Retour au dashboard
-                </Button>
             </div>
         );
     }
@@ -61,13 +54,6 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
         <div className={cn('flex flex-col space-y-6 p-4 md:p-6 h-full', className)}>
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">All Providers Overview</h2>
-                {/* Bouton temporaire pour tester le loading */}
-                <Button 
-                    variant="outline"
-                    onClick={() => setShowLoading(true)}
-                >
-                    Test Loading Animation
-                </Button>
             </div>
 
             {/* Stats Section */}
