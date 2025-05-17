@@ -1,0 +1,502 @@
+/**
+ * @file responsive.css
+ * @description Styles responsifs spécifiques pour les écrans de taille moyenne et petite
+ */
+
+/* Grands écrans (1200px-1600px) */
+@media screen and (min-width: 1200px) and (max-width: 1600px) {
+  /* Légers ajustements pour les grands écrans mais pas très grands */
+  .p-4.md\:p-8.lg\:p-12 {
+    padding: 2rem !important;
+  }
+  
+  /* Ajuster la grille pour avoir un peu plus d'espace */
+  .gap-8 {
+    gap: 1.5rem !important;
+  }
+  
+  /* Hauteur dynamique pour les graphiques - grands écrans */
+  .h-\[450px\], .min-h-\[450px\], .h-80, .h-72, .h-64 {
+    height: calc(100vh - 14rem) !important;
+    min-height: 350px !important;
+  }
+}
+
+/* Breakpoint principal pour les écrans moyens (moins de 1200px) */
+@media screen and (max-width: 1200px) {
+  /* Ajustements globaux */
+  html {
+    font-size: 14px; /* Réduire la taille de base de la police */
+  }
+
+  body {
+    overflow-x: hidden; /* Éviter les débordements horizontaux */
+  }
+
+  /* Titre principal et sous-titres sur la page d'accueil */
+  h1.text-4xl.md\:text-5xl.lg\:text-6xl {
+    font-size: 2.5rem !important; /* Taille réduite pour les grands titres */
+  }
+
+  h2.text-3xl {
+    font-size: 1.75rem !important;
+  }
+
+  h2.text-2xl {
+    font-size: 1.25rem !important; /* Réduction du titre de dashboard */
+  }
+
+  /* Ajustement des paragraphes */
+  p.text-lg.md\:text-xl {
+    font-size: 1rem !important;
+  }
+
+  /* Cartes de fonctionnalités */
+  .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+
+  /* Ajustements de conteneurs */
+  .p-4.md\:p-8.lg\:p-12 {
+    padding: 1.5rem !important;
+  }
+
+  /* Ajustements des cartes */
+  .card {
+    padding: 0.75rem !important;
+  }
+
+  /* Réduire l'espacement des cartes d'information */
+  .card > .p-6 {
+    padding: 1rem !important;
+  }
+
+  /* Réduire le padding des cards dans le dashboard */
+  .flex-col.space-y-6.p-4.md\:p-6 {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Marges inférieures réduites */
+  .mb-16.md\:mb-24 {
+    margin-bottom: 3rem !important;
+  }
+
+  .mb-12 {
+    margin-bottom: 2rem !important;
+  }
+
+  /* Icônes plus petites */
+  .h-10.w-10 {
+    height: 2rem !important;
+    width: 2rem !important;
+  }
+
+  /* Ajustements du tableau de bord */
+  .flex-1.overflow-y-auto.bg-muted\/30 {
+    padding: 0.75rem !important;
+  }
+
+  /* Statistiques globales */
+  .text-2xl, .text-3xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.1rem !important;
+  }
+
+  /* Réduire la taille de la barre latérale sur écrans moyens */
+  .w-80 {
+    width: 16rem !important;
+  }
+  
+  /* Ajuster la hauteur de la barre principale pour libérer de l'espace */
+  header.h-14 {
+    height: 2.75rem !important; /* Réduction de la hauteur */
+  }
+  
+  /* Sticky top ajustement pour WalletManagementBar suite à la réduction du header */
+  .sticky.top-14 {
+    top: 2.75rem !important;
+  }
+  
+  /* Réduction maximale du WalletManagementBar */
+  .sticky.top-14.z-20 {
+    padding: 0.25rem 0.35rem !important;
+    min-height: 0 !important;
+    max-height: 2.5rem !important;
+  }
+  
+  .sticky.top-14.z-20 .flex.items-center.gap-4 {
+    gap: 0.35rem !important; /* Réduire l'espace entre les éléments */
+  }
+  
+  .sticky.top-14.z-20 .h-8 {
+    height: 1.65rem !important; /* Réduire la hauteur des entrées et boutons */
+  }
+  
+  .sticky.top-14.z-20 form {
+    flex: 0 1 auto !important; /* Permettre au formulaire de se rétrécir */
+    min-width: 250px !important; /* Réduire la largeur minimale fixe */
+  }
+  
+  /* Réduire l'espace des cards contenant les statistiques */
+  .card-header {
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  .card-content {
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  /* Compresser la zone de statistiques */
+  .grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-3,
+  .grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4 {
+    gap: 0.25rem !important;
+  }
+  
+  /* Amélioration des graphiques pour un affichage plein écran */
+  .flex-1.overflow-y-auto.bg-muted\/30 > div {
+    margin-top: 0.25rem !important;
+  }
+  
+  /* Optimiser l'espacement des boutons dans les panels */
+  .flex.items-center.gap-2 {
+    gap: 0.5rem !important;
+  }
+
+  /* Optimisation du layout principal */
+  main.flex-1.overflow-y-auto {
+    height: calc(100vh - 2.75rem) !important; /* Hauteur ajustée pour la barre d'en-tête */
+  }
+
+  /* Ajustements pour les éléments de formulaire */
+  input, select, button {
+    font-size: 0.875rem !important;
+  }
+
+  /* Réduire l'espacement des titres de section dans les cartes */
+  .card-title {
+    margin-bottom: 0.25rem !important;
+    font-size: 1.25rem !important;
+  }
+  
+  /* Ajuster les en-têtes de section dans le tableau de bord */
+  .p-4.border-b, .p-6.border-b {
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  /* Ajustements pour les conteneurs de statistiques */
+  .flex.flex-col.space-y-4 > div {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  /* Optimisation des cards contenant les graphiques */
+  .card.flex.flex-col.flex-grow {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Ajustements des graphiques pour qu'ils utilisent l'espace disponible */
+  .h-\[450px\], .min-h-\[450px\], .h-80, .h-72, .h-64 {
+    height: calc(100vh - 7.5rem) !important; /* Hauteur ajustée en fonction des barres */
+    min-height: 250px !important;
+  }
+  
+  /* Supprimer les marges et padding inutiles dans les cards de graphiques */
+  .flex-grow.p-2 {
+    padding: 0.1rem !important;
+  }
+  
+  /* Réduire l'espace entre les items de statistiques */
+  .flex.justify-between {
+    margin-bottom: 0.15rem !important;
+  }
+  
+  /* Ajuster les contenus des cards de GlobalDashboardView et ProviderDetailView */
+  .flex-col.space-y-6 {
+    gap: 0.5rem !important;
+  }
+
+  /* Correction du double scrollbar */
+  html, body {
+    overflow: hidden;
+    height: 100%;
+  }
+
+  /* Conteneur principal avec scrollbar unique */
+  main.flex-1.overflow-y-auto {
+    height: calc(100vh - 2.75rem) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Empêcher les scrollbars secondaires sur tous les conteneurs imbriqués */
+  .flex-1.overflow-y-auto.bg-muted\/30 {
+    overflow: visible !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Conteneur du graphique - permettre qu'il s'étende en hauteur */
+  .card.flex.flex-col.flex-grow {
+    overflow: visible !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Conteneur interne du graphique */
+  .card-content.flex-grow.p-2 {
+    overflow: visible !important;
+  }
+  
+  /* Assurer que la carte avec la visualisation n'a pas de scrollbar propre */
+  .card.bg-card\/80.border-border\/50.flex.flex-col.flex-grow.overflow-hidden {
+    overflow: visible !important;
+  }
+  
+  /* S'assurer que toutes les cartes n'ont pas de scrollbar propre */
+  .card {
+    overflow: visible !important;
+  }
+}
+
+/* Breakpoint intermédiaire pour écrans entre 768px et 992px */
+@media screen and (min-width: 768px) and (max-width: 992px) {
+  /* Ajuster la mise en page des graphiques */
+  .grid.grid-cols-1.md\:grid-cols-2 {
+    grid-template-columns: 1fr !important; /* Force une seule colonne */
+  }
+
+  /* Réduire davantage les marges */
+  .p-4.md\:p-6 {
+    padding: 0.5rem !important;
+  }
+
+  /* Réduire la taille de la barre latérale davantage */
+  .w-80 {
+    width: 14rem !important;
+  }
+  
+  /* Compression maximale pour la barre des wallets */
+  .sticky.top-14.z-20 {
+    padding: 0.25rem 0.5rem !important;
+    max-height: 2.5rem !important;
+  }
+  
+  .sticky.top-14.z-20 input.h-8 {
+    height: 1.5rem !important;
+  }
+  
+  /* Ajuster la hauteur des graphiques avec le nouveau header */
+  .h-\[450px\], .min-h-\[450px\], .h-80, .h-72, .h-64 {
+    height: calc(100vh - 7rem) !important;
+    min-height: 220px !important;
+  }
+
+  /* Dans le tableau de bord, disposer certains éléments en une colonne */
+  .md\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Ajuster l'espacement dans les cartes de statistiques */
+  .card-content {
+    padding: 0.5rem !important;
+  }
+  
+  /* Optimiser l'affichage des cards */
+  .space-y-6 {
+    gap: 0.25rem !important;
+    margin-top: 0.25rem !important;
+  }
+  
+  /* Comprimer encore plus le header principal */
+  header.h-14 {
+    height: 2.5rem !important;
+  }
+  
+  /* Ajuster le sticky top en conséquence */
+  .sticky.top-14 {
+    top: 2.5rem !important;
+  }
+
+  /* S'assurer de ne pas avoir de double scrollbar ici non plus */
+  .flex-1.overflow-y-auto.bg-muted\/30 {
+    overflow-y: visible !important;
+  }
+
+  /* Ajustement spécifique pour main sur les écrans intermédiaires */
+  main.flex-1.overflow-y-auto {
+    height: calc(100vh - 2.5rem) !important;
+  }
+}
+
+/* Breakpoint pour très petits écrans (moins de 768px) */
+@media screen and (max-width: 768px) {
+  /* Réduire davantage les marges et espacements */
+  .p-4.md\:p-8.lg\:p-12 {
+    padding: 0.75rem !important;
+  }
+
+  /* Une seule colonne pour les cartes sur mobile */
+  .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Titre encore plus petit */
+  h1.text-4xl.md\:text-5xl.lg\:text-6xl {
+    font-size: 1.75rem !important;
+  }
+
+  /* Réduire l'espacement entre les éléments */
+  .gap-4, .gap-6, .gap-8 {
+    gap: 0.25rem !important;
+  }
+
+  /* Ajuster les cartes de statistiques */
+  .card {
+    padding: 0.35rem !important;
+  }
+
+  /* Réduire les tailles de police des statistiques */
+  .text-2xl, .text-3xl {
+    font-size: 1.125rem !important;
+  }
+  
+  /* Compression maximale pour mobile */
+  .sticky.top-14.z-20 {
+    padding: 0.2rem !important;
+    max-height: 2.35rem !important;
+  }
+  
+  /* Ajuster la taille des graphiques pour utiliser l'espace disponible */
+  .h-\[450px\], .min-h-\[450px\], .h-80, .h-72, .h-64 {
+    height: calc(100vh - 6.5rem) !important; /* Ajusté pour les barres plus petites sur mobile */
+    min-height: 200px !important;
+  }
+  
+  /* Compression maximale des cards */
+  .card-header {
+    padding: 0.25rem 0.35rem !important;
+  }
+  
+  .card-content {
+    padding: 0.25rem 0.35rem !important;
+  }
+
+  /* Ajuster le padding dans les popups et feuilles latérales */
+  .p-4 {
+    padding: 0.5rem !important;
+  }
+
+  /* Optimiser l'affichage des champs de formulaire */
+  input.w-full {
+    height: 1.85rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Ajuster la taille des boutons */
+  button {
+    padding-left: 0.35rem !important;
+    padding-right: 0.35rem !important;
+    height: 1.85rem !important;
+  }
+  
+  /* Réduire encore plus les espacements de cartes */
+  .space-y-6 {
+    gap: 0.2rem !important;
+    margin-top: 0.2rem !important;
+  }
+  
+  /* Comprimer davantage la barre de gestion des wallets pour gagner de l'espace vertical */
+  .sticky.top-14.z-20 form {
+    max-width: 270px !important;
+  }
+  
+  /* Comprimer encore plus le header principal */
+  header.h-14 {
+    height: 2.35rem !important;
+  }
+  
+  /* Ajuster le sticky top en conséquence */
+  .sticky.top-14 {
+    top: 2.35rem !important;
+  }
+
+  /* S'assurer de ne pas avoir de double scrollbar ici non plus */
+  .flex-1.overflow-y-auto.bg-muted\/30 {
+    overflow-y: visible !important;
+  }
+
+  /* Ajustement spécifique pour main sur les petits écrans */
+  main.flex-1.overflow-y-auto {
+    height: calc(100vh - 2.35rem) !important;
+  }
+}
+
+/* Règles globales pour corriger le double scrollbar sur tous les écrans */
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+main.flex-1.overflow-y-auto {
+  height: calc(100vh - 3.5rem) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  width: 100% !important;
+}
+
+/* Assurer que les conteneurs internes n'ont pas leur propre scrollbar */
+.flex-1.overflow-y-auto.bg-muted\/30 {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+.card.bg-card\/80.border-border\/50.flex.flex-col.flex-grow.overflow-hidden,
+.card.flex.flex-col.flex-grow,
+.card-content.flex-grow,
+.card-content.flex-grow.p-2 {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+/* Empêcher les débordements horizontaux sur les éléments de graphique */
+svg, canvas, .recharts-wrapper {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Correction pour éliminer les scrollbars doublons */
+.flex-1.overflow-y-auto.bg-muted\/30 {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+}
+
+/* S'assurer que les conteneurs de vue n'ont pas de scrollbar propre */
+.flex-1.overflow-y-auto.bg-muted\/30 > div {
+  overflow: visible !important;
+}
+
+/* Correction spécifique pour les cartes des vues de détail */
+.card.bg-card\/80.border-border\/50.flex.flex-col.flex-grow {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Conteneur du graphique sans scrollbar propre */
+.card-content.flex-grow {
+  overflow: visible !important;
+}
+
+/* Empêcher les éléments de graphique de créer des scrollbars imprévus */
+.recharts-wrapper {
+  overflow: visible !important;
+}
+
+/* Breakpoint principal pour les écrans moyens (moins de 1200px) */
+@media screen and (max-width: 1200px) {
+  /* ... autres styles inchangés ... */
+} 

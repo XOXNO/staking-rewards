@@ -12,6 +12,7 @@ import React, {
   useContext,
   useMemo,
   useCallback,
+  useEffect,
 } from "react";
 import { XoxnoRewardsService } from "@/api/services/XoxnoRewardsService";
 import type {
@@ -20,6 +21,7 @@ import type {
   IStakingContextProps,
 } from "./StakingContext.type";
 import type { XoxnoApiError } from "@/api/services/XoxnoRewardsService";
+import { useWalletColors } from "@/lib/hooks/useWalletColors";
 
 const initialState: IStakingState = {
   addedAddresses: [],
@@ -28,6 +30,7 @@ const initialState: IStakingState = {
   rewardsData: {},
   isLoading: {},
   error: {},
+  walletColorMap: {},
 };
 
 // Create the context with a default value (can be undefined or initial state)
@@ -78,6 +81,7 @@ const stakingReducer = (
         rewardsData: removeProperty(addressToRemove, state.rewardsData),
         isLoading: removeProperty(addressToRemove, state.isLoading),
         error: removeProperty(addressToRemove, state.error),
+        walletColorMap: removeProperty(addressToRemove, state.walletColorMap),
       };
 
     case "TOGGLE_SELECTED_ADDRESS":
@@ -90,10 +94,19 @@ const stakingReducer = (
           : [...state.selectedAddresses, addressToToggle],
       };
 
-    case "SET_SELECTED_ADDRESSES": // Optional handler
+    case "SET_SELECTED_ADDRESSES":
       return {
         ...state,
         selectedAddresses: action.payload.addresses,
+      };
+
+    case "SET_WALLET_COLOR":
+      return {
+        ...state,
+        walletColorMap: {
+          ...state.walletColorMap,
+          [action.payload.address]: action.payload.color,
+        },
       };
 
     case "FETCH_REWARDS_START":
@@ -133,11 +146,6 @@ const stakingReducer = (
           ...state.error,
           [action.payload.address]: action.payload.error,
         },
-        // Keep potentially partial data or clear it?
-        // rewardsData: {
-        //   ...state.rewardsData,
-        //   [action.payload.address]: null,
-        // },
       };
 
     case "SELECT_PROVIDER":
@@ -155,9 +163,13 @@ const stakingReducer = (
         },
       };
 
+    case "UPDATE_WALLET_COLORS":
+      return {
+        ...state,
+        walletColorMap: action.payload.colorMap,
+      };
+
     default:
-      // If using TypeScript, this helps catch unhandled actions
-      // const exhaustiveCheck: never = action;
       return state;
   }
 };
@@ -168,11 +180,28 @@ export const StakingProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [state, dispatch] = useReducer(stakingReducer, initialState);
 
-  // Instantiate the service - consider dependency injection for testability if needed
-  // const xoxnoService = useMemo(() => new XoxnoRewardsService(), []);
+  // Utilise le hook de couleurs avec les adresses du state
+  const { walletColorMap, setWalletColor: setColor } = useWalletColors(state.addedAddresses);
+
+  // Synchronise les couleurs du hook avec le state du contexte
+  useEffect(() => {
+    dispatch({
+      type: "UPDATE_WALLET_COLORS",
+      payload: { colorMap: walletColorMap },
+    });
+  }, [walletColorMap]);
 
   // Optional: Memoize context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({ state, dispatch }), [state, dispatch]);
+  const contextValue = useMemo(() => {
+    const value = {
+      state: { ...state, walletColorMap: state.walletColorMap },
+      dispatch,
+      setWalletColor: (address: string, color: string) => {
+        setColor(address, color);
+      },
+    };
+    return value;
+  }, [state, dispatch, setColor]);
 
   return (
     <StakingContext.Provider value={contextValue}>
@@ -289,7 +318,6 @@ export const useStaking = () => {
     toggleSelectedAddress,
     selectProvider,
     clearAddressError,
-    // Keep fetchRewards exposed? Probably not needed directly by components anymore
-    // fetchRewards,
+    setWalletColor: context.setWalletColor,
   };
 };

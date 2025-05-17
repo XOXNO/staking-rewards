@@ -190,3 +190,138 @@ export const calculateProviderAggregatedStats = (
 
   return { avg, min, max };
 };
+
+// Type utilitaire pour l'aggregation par wallet
+interface EpochRewardDataWithWallet extends IEpochRewardData {
+  walletAddress: string;
+}
+
+/**
+ * Aggregates rewards by wallet for each epoch (for stacked chart by wallet).
+ * Can be used for global (all providers) or a specific provider.
+ *
+ * @param allProvidersData - Record<provider, IEpochRewardData[]> (for global) OR { [provider]: epochs[] } (for a provider)
+ * @param providerOwners - mapping provider -> owner
+ * @param selectedAddresses - selected addresses
+ * @param filterProvider - optional, provider to filter (for provider chart)
+ * @returns Array<{ epoch, [wallet]: amount }>
+ */
+export function aggregateEpochDataByWallet(
+  allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
+  providerOwners: Record<string, string>,
+  selectedAddresses: string[],
+  filterProvider?: string
+): Array<{ epoch: number; [wallet: string]: number }> {
+  if (!allProvidersData || selectedAddresses.length === 0) return [];
+
+  const epochWalletMap: Map<number, Record<string, number>> = new Map();
+
+  Object.entries(allProvidersData).forEach(([providerAddress, epochDataArray]) => {
+    if (filterProvider && providerAddress !== filterProvider) return;
+    const ownerAddress = providerOwners[providerAddress];
+
+    epochDataArray.forEach(epochData => {
+      selectedAddresses.forEach(wallet => {
+        let reward = 0;
+        if (epochData.walletAddress === wallet) {
+          reward += epochData.epochUserRewards || 0;
+        }
+        if (wallet === ownerAddress) {
+          reward += epochData.ownerRewards || 0;
+        }
+        if (reward > 0) {
+          if (!epochWalletMap.has(epochData.epoch)) {
+            epochWalletMap.set(epochData.epoch, {});
+          }
+          const walletMap = epochWalletMap.get(epochData.epoch)!;
+          walletMap[wallet] = (walletMap[wallet] || 0) + reward;
+        }
+      });
+    });
+  });
+
+  const result = Array.from(epochWalletMap.entries())
+    .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+    .sort((a, b) => a.epoch - b.epoch);
+
+  return result;
+}
+
+/**
+ * Aggregates rewards by wallet for each epoch of a given provider.
+ * @param allProvidersData - All reward data (with walletAddress)
+ * @param providerOwners - Mapping provider -> owner
+ * @param selectedAddresses - Selected wallets
+ * @param provider - Provider to filter (required)
+ * @returns Array<{ epoch: number; [wallet: string]: number }>
+ */
+export function aggregateProviderEpochDataByWallet(
+  allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
+  providerOwners: Record<string, string>,
+  selectedAddresses: string[],
+  provider: string
+): Array<{ epoch: number; [wallet: string]: number }> {
+  if (!allProvidersData || selectedAddresses.length === 0 || !provider) return [];
+
+  const epochWalletMap: Map<number, Record<string, number>> = new Map();
+  const epochDataArray = allProvidersData[provider] || [];
+  const ownerAddress = providerOwners[provider];
+
+  epochDataArray.forEach(epochData => {
+    selectedAddresses.forEach(wallet => {
+      let reward = 0;
+      if (epochData.walletAddress === wallet) {
+        reward += epochData.epochUserRewards || 0;
+      }
+      if (wallet === ownerAddress) {
+        reward += epochData.ownerRewards || 0;
+      }
+      if (reward > 0) {
+        if (!epochWalletMap.has(epochData.epoch)) {
+          epochWalletMap.set(epochData.epoch, {});
+        }
+        const walletMap = epochWalletMap.get(epochData.epoch)!;
+        walletMap[wallet] = (walletMap[wallet] || 0) + reward;
+      }
+    });
+  });
+
+  return Array.from(epochWalletMap.entries())
+    .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+    .sort((a, b) => a.epoch - b.epoch);
+}
+
+/**
+ * Aggregates staked amounts by wallet for each epoch.
+ * @param allProvidersData - Record<provider, IEpochRewardData[]>
+ * @param providerOwners - mapping provider -> owner
+ * @param selectedAddresses - selected addresses
+ * @returns Array<{ epoch, [wallet]: amount }>
+ */
+export function aggregateStakingDataByWallet(
+  allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
+  providerOwners: Record<string, string>,
+  selectedAddresses: string[]
+): Array<{ epoch: number; [wallet: string]: number }> {
+  if (!allProvidersData || selectedAddresses.length === 0) return [];
+
+  const epochWalletMap: Map<number, Record<string, number>> = new Map();
+
+  Object.entries(allProvidersData).forEach(([providerAddress, epochDataArray]) => {
+    epochDataArray.forEach(epochData => {
+      const wallet = epochData.walletAddress;
+      if (selectedAddresses.includes(wallet)) {
+        if (!epochWalletMap.has(epochData.epoch)) {
+          epochWalletMap.set(epochData.epoch, {});
+        }
+        const walletMap = epochWalletMap.get(epochData.epoch)!;
+        // Add the staked amount for this wallet at this epoch
+        walletMap[wallet] = (walletMap[wallet] || 0) + (epochData.totalStaked || 0);
+      }
+    });
+  });
+
+  return Array.from(epochWalletMap.entries())
+    .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+    .sort((a, b) => a.epoch - b.epoch);
+}

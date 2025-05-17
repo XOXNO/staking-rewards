@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { XIcon } from 'lucide-react';
+import { XIcon, ArrowDown, ArrowUp } from 'lucide-react';
 import { shortenAddress } from '@/lib/utils/formatters';
 import { Separator } from "@/components/ui/separator";
 
@@ -24,6 +24,9 @@ interface IProviderSidebarProps {
     onSelectProvider: (providerAddress: string | null) => void;
     onItemClick?: () => void;
     className?: string;
+    totalRewardsPerProvider?: Record<string, number>;
+    fullRewardsData?: Record<string, import('@/api/types/xoxno-rewards.types').IXoxnoUserRewardsResponse | null>;
+    currentEpoch?: number;
 }
 
 /**
@@ -37,6 +40,9 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
     onSelectProvider,
     onItemClick,
     className,
+    totalRewardsPerProvider,
+    fullRewardsData,
+    currentEpoch,
 }) => {
     const {
         state,
@@ -45,6 +51,7 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
         dispatch,
     } = useStaking();
     const { addedAddresses, selectedAddresses } = state;
+    const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
 
     const handleSelectAll = React.useCallback(() => {
         dispatch({ type: 'SET_SELECTED_ADDRESSES', payload: { addresses: addedAddresses } });
@@ -59,6 +66,36 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
         onItemClick?.();
     };
     
+    const sortedProviders = React.useMemo(() => {
+      if (!providers) return [];
+      return [...providers].sort((a, b) => {
+        const aReward = totalRewardsPerProvider?.[a.provider] ?? 0;
+        const bReward = totalRewardsPerProvider?.[b.provider] ?? 0;
+        if (aReward === bReward) {
+          // fallback: tri alphabétique
+          return (a.identityInfo?.name || a.identity || a.provider)
+            .localeCompare(b.identityInfo?.name || b.identity || b.provider);
+        }
+        return sortOrder === 'asc' ? aReward - bReward : bReward - aReward;
+      });
+    }, [providers, totalRewardsPerProvider, sortOrder]);
+
+    const isCurrentlyStaked = (provider: IProviderWithIdentity) => {
+      if (!fullRewardsData || !currentEpoch) return false;
+      // Agrège tous les epochs de tous les wallets sélectionnés pour ce provider
+      let lastEpoch: number | undefined = undefined;
+      Object.values(fullRewardsData).forEach((rewards) => {
+        const epochs = rewards?.providersFullRewardsData?.[provider.provider];
+        if (epochs && epochs.length > 0) {
+          const maxEpoch = Math.max(...epochs.map(e => e.epoch));
+          if (lastEpoch === undefined || maxEpoch > lastEpoch) {
+            lastEpoch = maxEpoch;
+          }
+        }
+      });
+      return lastEpoch !== undefined && lastEpoch >= currentEpoch - 1;
+    };
+
     return (
         <ScrollArea className={`h-full ${className}`}>
             <div className="md:hidden p-4 border-b border-border/50">
@@ -101,7 +138,23 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
             <Separator className="md:hidden" /> 
             
             <div className="p-4">
-                <h2 className="text-lg font-semibold tracking-tight mb-2 px-2">Providers</h2>
+                <div className="flex items-center mb-2 px-2">
+                  <h2 className="text-lg font-semibold tracking-tight flex-1">Providers</h2>
+                </div>
+                <div className="absolute right-4 top-6 z-10">
+                  <button
+                    type="button"
+                    className="p-1 rounded hover:bg-muted transition"
+                    onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+                    title={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
+                  >
+                    {sortOrder === 'asc' ? (
+                      <ArrowUp className="w-4 h-4" />
+                    ) : (
+                      <ArrowDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
                 <div className="space-y-1 p-2">
                     <Button
                         variant={selectedProviderAddress === null ? "secondary" : "ghost"}
@@ -113,30 +166,51 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
                         </span>
                     </Button>
                     
-                    {!providers || providers.length === 0 ? (
+                    {!sortedProviders || sortedProviders.length === 0 ? (
                         <p className="text-sm text-muted-foreground px-2 py-4">No providers found.</p>
                     ) : (
-                        providers.map((provider) => (
-                            <Button
-                                key={provider.provider}
-                                variant={selectedProviderAddress === provider.provider ? "secondary" : "ghost"}
-                                className="w-full justify-start h-12 px-3"
-                                onClick={() => handleItemClick(provider.provider)}
-                            >
-                                {provider.identityInfo?.avatar && (
-                                    <Image
-                                        src={provider.identityInfo.avatar}
-                                        alt={provider.identityInfo.name || provider.provider}
-                                        width={28}
-                                        height={28}
-                                        className="mr-3 rounded-full w-7 h-7 object-cover border"
-                                    />
-                                )}
-                                <span className="flex-1 text-left truncate">
-                                    {provider.identityInfo?.name || provider.identity || provider.provider}
-                                </span>
-                            </Button>
-                        ))
+                        sortedProviders.map((provider) => {
+                            const staked = isCurrentlyStaked(provider);
+                            const name = provider.identityInfo?.name || provider.identity || provider.provider;
+                            const maxLen = 18;
+                            const displayName = name.length > maxLen ? name.slice(0, maxLen - 3) + '...' : name;
+                            return (
+                                <Button
+                                    key={provider.provider}
+                                    variant={selectedProviderAddress === provider.provider ? "secondary" : "ghost"}
+                                    className={`
+                                        w-full justify-start h-12 px-3
+                                        border-l-4
+                                        ${staked ? 'border-green-500' : 'border-orange-400'}
+                                        ${selectedProviderAddress === provider.provider ? 'bg-muted/60' : ''}
+                                    `}
+                                    onClick={() => handleItemClick(provider.provider)}
+                                >
+                                    {provider.identityInfo?.avatar && (
+                                        <Image
+                                            src={provider.identityInfo.avatar}
+                                            alt={provider.identityInfo.name || provider.provider}
+                                            width={28}
+                                            height={28}
+                                            className="mr-3 rounded-full w-7 h-7 object-cover border"
+                                        />
+                                    )}
+                                    <span className="flex-1 min-w-0 flex items-center justify-between">
+                                        <span
+                                            className="block truncate overflow-hidden whitespace-nowrap text-ellipsis"
+                                            style={{ maxWidth: 'calc(100% - 80px)' }}
+                                        >
+                                            {displayName}
+                                        </span>
+                                        {totalRewardsPerProvider && totalRewardsPerProvider[provider.provider] !== undefined && (
+                                            <span className="ml-2 text-xs text-muted-foreground font-mono tabular-nums flex-shrink-0 text-right">
+                                                {totalRewardsPerProvider[provider.provider].toLocaleString('en-US', { maximumFractionDigits: 3 })} EGLD
+                                            </span>
+                                        )}
+                                    </span>
+                                </Button>
+                            );
+                        })
                     )}
                 </div>
             </div>

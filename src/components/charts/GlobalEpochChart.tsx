@@ -1,37 +1,81 @@
 /**
  * @file GlobalEpochChart.tsx
- * @description Displays aggregated epoch rewards across all providers.
+ * @description Displays the global chart of rewards per epoch across all providers.
  * @module components/charts/GlobalEpochChart
  */
 
-'use client';
+"use client";
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
+  AreaChart,
+  BarChart,
+  Area,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  TooltipProps
 } from 'recharts';
-import {
-    ChartConfig,
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart";
-import { IAggregatedEpochData } from '@/types/dashboard'; // Assuming type exists
+import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
+import { useStaking } from '@/lib/context/StakingContext';
 import { cn } from '@/lib/utils/cn';
-import { formatEgld } from '@/lib/utils/formatters';
-import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { ChartTooltipWrapper, type ChartPayload } from "@/components/ui/chart/ChartTooltipWrapper";
+import { IAggregatedEpochData } from '@/types/dashboard';
+import { calculateCumulativeData, precalculateEpochSums, calculateYDomain } from '@/lib/utils/chartUtils';
+import { DisplayMode } from '@/components/dashboard/ChartToggles';
 
 interface IGlobalEpochChartProps {
     aggregatedEpochData: IAggregatedEpochData[] | undefined;
+    epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
     chartType: 'bar' | 'line';
+    displayMode: 'daily' | 'cumulative';
     className?: string;
+}
+
+/**
+ * Reduces the number of data points for more efficient rendering
+ */
+function reduceDataPoints(
+  data: Array<{ epoch: number; [wallet: string]: number | string }>,
+  targetPoints: number = 200
+): Array<{ epoch: number; [wallet: string]: number | string }> {
+  if (data.length <= targetPoints) return data;
+  
+  const step = Math.ceil(data.length / targetPoints);
+  const result = [];
+  
+  for (let i = 0; i < data.length; i += step) {
+    const chunk = data.slice(i, i + step);
+    const aggregated: { epoch: number; [wallet: string]: number | string } = {
+      epoch: chunk[0].epoch,
+    };
+    
+    // Calculate the average for each wallet on this group of points
+    chunk.forEach(point => {
+      Object.entries(point).forEach(([key, value]) => {
+        if (key === 'epoch') return;
+        if (typeof value === 'number') {
+          if (!aggregated[key]) aggregated[key] = 0;
+          aggregated[key] = (aggregated[key] as number) + (value / chunk.length);
+        }
+      });
+    });
+    
+    // Optimize numbers
+    Object.entries(aggregated).forEach(([key, value]) => {
+      if (key !== 'epoch' && typeof value === 'number') {
+        aggregated[key] = Number(value.toFixed(6));
+      }
+    });
+    
+    result.push(aggregated);
+  }
+  
+  return result;
 }
 
 /**
@@ -39,19 +83,26 @@ interface IGlobalEpochChartProps {
  */
 export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
     aggregatedEpochData,
+    epochWalletData,
     chartType,
+    displayMode,
     className,
 }) => {
-    // Use the aggregation hook, passing 'totalReward' as the key
-    // We need to map aggregatedEpochData slightly first to fit the hook's expected input shape { epoch, value }
-    const preProcessedData = useMemo(() => {
-        if (!aggregatedEpochData) return undefined;
-        return aggregatedEpochData.map(d => ({ epoch: d.epoch, value: d.totalReward }));
-    }, [aggregatedEpochData]);
+    // Add a state to track displayMode changes
+    const [prevDisplayMode, setPrevDisplayMode] = useState<DisplayMode>(displayMode);
+    
+    // Effect to detect and handle displayMode changes
+    useEffect(() => {
+        if (prevDisplayMode !== displayMode) {
+            setPrevDisplayMode(displayMode);
+        }
+    }, [displayMode, prevDisplayMode]);
+    
+    // Use context to get colors
+    const { state: { walletColorMap } } = useStaking();
 
-    const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
-
-    if (!processedChartData || processedChartData.length === 0) {
+    // If no data, display a message
+    if (!epochWalletData || epochWalletData.length === 0) {
         return (
             <div className={cn("text-center text-muted-foreground text-sm py-8", className)}>
                 No global epoch data available.
@@ -59,117 +110,160 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
         );
     }
 
-    // Chart config for the global view
-    const chartConfig = {
-        reward: {
-            label: "Total EGLD Reward",
-            color: "hsl(142.1, 76.2%, 45.1%)", // Use a distinct color, e.g., green
+    // List of wallets (stable order)
+    const wallets = useMemo(() => {
+        return Object.keys(walletColorMap);
+    }, [walletColorMap]);
+
+    // Pre-calculate sums by epoch (direct calculation)
+    const processedData = useMemo(() => {
+        return precalculateEpochSums(epochWalletData, wallets);
+    }, [epochWalletData, wallets]);
+
+    // Calculate cumulative data
+    const cumulativeData = useMemo(() => {
+        return calculateCumulativeData(processedData, wallets);
+    }, [processedData, wallets]);
+
+    // Pre-calculate totals for cumulative data
+    const processedCumulativeData = useMemo(() => {
+        return precalculateEpochSums(cumulativeData, wallets);
+    }, [cumulativeData, wallets]);
+
+    // Select data based on display mode
+    const displayData = useMemo(() => {
+        return displayMode === "cumulative" ? processedCumulativeData : processedData;
+    }, [displayMode, processedCumulativeData, processedData]);
+
+    // Reduce the number of points for display
+    const optimizedDisplayData = useMemo(() => {
+        return reduceDataPoints(displayData);
+    }, [displayData]);
+
+    // Calculate Y-axis limits
+    const yDomain = useMemo(() => {
+        return calculateYDomain(optimizedDisplayData, displayMode, wallets);
+    }, [optimizedDisplayData, displayMode, wallets]);
+
+    // Y-axis formatter
+    const yTickFormatter = useCallback((value: any) => {
+        if (typeof value !== 'number') return '';
+        const maxValue = yDomain[1];
+        const decimals = maxValue < 0.1 ? 4 : maxValue < 1 ? 3 : maxValue < 10 ? 2 : maxValue < 100 ? 1 : 0;
+        return value.toLocaleString(undefined, {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
+    }, [yDomain]);
+
+    // Memoize common styles
+    const chartStyles = useMemo(() => ({
+        cartesianGrid: {
+            vertical: false,
+            strokeDasharray: "3 3",
+            stroke: "hsl(var(--border) / 0.5)"
         },
-    } satisfies ChartConfig;
+        xAxis: {
+            tickLine: false,
+            axisLine: false,
+            tickMargin: 8,
+            fontSize: 10,
+            minTickGap: 80
+        },
+        yAxis: {
+            tickLine: false,
+            axisLine: false,
+            tickMargin: 8,
+            fontSize: 10,
+            width: 80
+        }
+    }), []);
 
-    // Determine max value for setting upper bound buffer - Use processed data
-    const rewards = processedChartData.map(d => d.reward);
-    const maxY = rewards.length > 0 ? Math.max(...rewards) : 0;
-    const buffer = Math.max(maxY * 0.1, 1); // 10% buffer or at least 1 EGLD
-    const yDomain: [number | string, number | string] = [0, `dataMax + ${buffer}`];
+    // Memoize chart components
+    const chartElements = useMemo(() => {
+        const elements = wallets.map(wallet => {
+            const color = walletColorMap[wallet];
+            if (chartType === 'bar') {
+                return (
+                    <Bar
+                        key={wallet}
+                        dataKey={wallet}
+                        stackId="stack"
+                        fill={color}
+                        name={wallet}
+                        radius={2}
+                        isAnimationActive={false}
+                    />
+                );
+            } else {
+                return (
+                    <Area
+                        key={wallet}
+                        dataKey={wallet}
+                        stackId="stack"
+                        type="natural"
+                        fill={color}
+                        stroke={color}
+                        fillOpacity={0.5}
+                        strokeWidth={2}
+                        dot={false}
+                        name={wallet}
+                        isAnimationActive={false}
+                    />
+                );
+            }
+        });
+        return elements;
+    }, [wallets, walletColorMap, chartType]);
 
-    const gradientId = "fill-global-reward";
-
-    // Choose the correct parent chart component
+    // Choose parent component
     const ChartComponent = chartType === 'bar' ? BarChart : AreaChart;
 
     return (
         <ChartContainer
-            config={chartConfig}
-            className={cn("min-h-[250px] w-full", className)}
+            config={{}}
+            className={cn("h-[450px] w-full", className)}
         >
-            <ResponsiveContainer width="100%" height="100%">
-                <ChartComponent
-                    accessibilityLayer
-                    data={processedChartData}
-                    margin={{
-                        top: 10,
-                        right: 10,
-                        left: 5,
-                        bottom: 15, // Increased bottom margin
-                    }}
-                    barGap={chartType === 'bar' ? 2 : undefined} // Apply barGap only for BarChart
-                >
-                    <defs>
-                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop
-                                offset="5%"
-                                stopColor="var(--color-reward)"
-                                stopOpacity={0.8}
+            <div className="w-full h-full p-2">
+                <div className="h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ChartComponent
+                            accessibilityLayer
+                            data={optimizedDisplayData}
+                            margin={{
+                                top: 10,
+                                right: 10,
+                                left: 5,
+                                bottom: 15,
+                            }}
+                            barGap={chartType === 'bar' ? 2 : undefined}
+                        >
+                            <CartesianGrid {...chartStyles.cartesianGrid} />
+                            <XAxis
+                                dataKey="epoch"
+                                {...chartStyles.xAxis}
                             />
-                            <stop
-                                offset="95%"
-                                stopColor="var(--color-reward)"
-                                stopOpacity={0.1}
+                            <YAxis
+                                {...chartStyles.yAxis}
+                                tickFormatter={yTickFormatter}
+                                domain={yDomain}
                             />
-                        </linearGradient>
-                    </defs>
-
-                    <CartesianGrid
-                        vertical={false}
-                        strokeDasharray="3 3"
-                        stroke="hsl(var(--border) / 0.5)"
-                    />
-                    <XAxis
-                        dataKey="epoch"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        fontSize={10}
-                        minTickGap={80} // Increased min gap
-                    />
-                    <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        fontSize={10}
-                        // Remove fixed width: width={70}
-                        domain={yDomain}
-                        tickFormatter={(value) => {
-                            if (typeof value !== 'number') return '';
-                            return value.toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 1
-                            });
-                        }}
-                        allowDecimals={true}
-                    />
-                    <ChartTooltip
-                        cursor={false}
-                        content={
-                            <ChartTooltipContent
-                                labelFormatter={(label, payload) =>
-                                    payload?.[0]?.payload?.label || `Epoch ${label}`
-                                }
-                                formatter={(value) => formatEgld(value as number)}
-                                indicator="dot"
+                            <ChartTooltip
+                                content={({ active, payload }) => (
+                                    <ChartTooltipWrapper
+                                        active={active}
+                                        payload={payload as unknown as ChartPayload[]}
+                                        walletColorMap={walletColorMap}
+                                        displayMode={displayMode}
+                                        viewMode="rewards"
+                                    />
+                                )}
                             />
-                        }
-                    />
-                    {/* Conditional Rendering: Bar or Area */}
-                    {chartType === 'bar' ? (
-                        <Bar
-                            dataKey="reward"
-                            fill="var(--color-reward)"
-                            radius={2}
-                        />
-                    ) : (
-                        <Area
-                            dataKey="reward"
-                            type="natural"
-                            fill={`url(#${gradientId})`}
-                            stroke="var(--color-reward)"
-                            strokeWidth={2}
-                            dot={false}
-                        />
-                    )}
-                </ChartComponent>
-            </ResponsiveContainer>
+                            {chartElements}
+                        </ChartComponent>
+                    </ResponsiveContainer>
+                </div>
+            </div>
         </ChartContainer>
     );
 };

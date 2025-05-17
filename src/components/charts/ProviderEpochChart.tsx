@@ -6,7 +6,7 @@
 
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback, useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -21,55 +21,103 @@ import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"; // Use shadcn chart components
 import { IEpochRewardData } from "@/api/types/xoxno-rewards.types";
 import { cn } from "@/lib/utils/cn";
-import { formatEgld } from "@/lib/utils/formatters"; // Import from utils
-import { useChartAggregation, ProcessedChartDataPoint } from "@/lib/hooks/useChartAggregation";
+import { useChartAggregation } from "@/lib/hooks/useChartAggregation";
+import { ChartTooltipWrapper, type ChartPayload } from "@/components/ui/chart/ChartTooltipWrapper";
+import { calculateCumulativeData, precalculateEpochSums, calculateYDomain } from "@/lib/utils/chartUtils";
+import { useStaking } from "@/lib/context/StakingContext";
+import { DisplayMode } from "@/components/dashboard/ChartToggles";
+
+/**
+ * Format of a data entry for the epoch chart by wallet.
+ * Each object represents an epoch, with rewards by wallet.
+ * @example { epoch: 1234, 'erd1...': 1.23, 'erd1...2': 0.5 }
+ */
+export interface IWalletEpochChartData {
+  epoch: number;
+  [wallet: string]: number | string;
+}
 
 interface IProviderEpochChartProps {
-  epochData: IEpochRewardData[] | undefined;
+  epochWalletData: IWalletEpochChartData[];
   providerName: string;
-  activeAddress: string; // Needed to determine owner rewards
-  providerOwnerAddress: string;
   chartType: "bar" | "line";
+  displayMode: "daily" | "cumulative";
   className?: string;
+  viewMode?: 'rewards' | 'staked';
 }
 
 /**
- * Renders a bar chart showing EGLD rewards per epoch for a specific provider.
+ * Reduces the number of data points for display
+ * by aggregating nearby points based on container width
+ */
+function reduceDataPoints(
+  data: IWalletEpochChartData[],
+  targetPoints: number = 200 // Target number of points for smooth rendering
+): IWalletEpochChartData[] {
+  if (data.length <= targetPoints) return data;
+  
+  const step = Math.max(1, Math.floor(data.length / targetPoints));
+  const result: IWalletEpochChartData[] = [];
+  
+  for (let i = 0; i < data.length; i += step) {
+    const chunk = data.slice(i, i + step);
+    const aggregated: IWalletEpochChartData = {
+      epoch: chunk[0].epoch, // Keep the first epoch of the group
+    };
+    
+    // Calculate the average for each wallet on this group of points
+    chunk.forEach(point => {
+      Object.entries(point).forEach(([key, value]) => {
+        if (key === 'epoch') return;
+        if (typeof value === 'number') {
+          if (!aggregated[key]) aggregated[key] = 0;
+          aggregated[key] = (aggregated[key] as number) + (value / chunk.length);
+        }
+      });
+    });
+    
+    // Optimize numbers
+    Object.entries(aggregated).forEach(([key, value]) => {
+      if (key !== 'epoch' && typeof value === 'number') {
+        aggregated[key] = Number(value.toFixed(6));
+      }
+    });
+    
+    result.push(aggregated);
+  }
+  
+  return result;
+}
+
+/**
+ * Renders a stacked chart showing EGLD rewards per epoch for a specific provider, split by wallet.
  */
 export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
-  epochData,
+  epochWalletData,
   providerName,
-  activeAddress,
-  providerOwnerAddress,
   chartType,
+  displayMode,
   className,
+  viewMode = 'rewards',
 }) => {
-  // 1. Pre-process data to include the target 'value' for aggregation
-  const preProcessedData = useMemo(() => {
-    if (!epochData) return undefined;
-    
-    // Determine if the specific activeAddress viewing is the owner
-    // Note: This check is crucial. If multiple selected wallets view this, 
-    // activeAddress might represent multiple, requiring adjustment.
-    // Assuming for now activeAddress is a single viewing address context.
-    const isViewerOwner = activeAddress === providerOwnerAddress;
+  // Add state to track displayMode changes
+  const [prevDisplayMode, setPrevDisplayMode] = useState<DisplayMode>(displayMode);
 
-    return epochData.map(epoch => ({
-      ...epoch,
-      // Calculate the value to be aggregated/plotted
-      value: epoch.epochUserRewards + (isViewerOwner ? epoch.ownerRewards : 0)
-    }));
-  }, [epochData, activeAddress, providerOwnerAddress]);
+  // Effect to detect and handle displayMode changes
+  useEffect(() => {
+    if (prevDisplayMode !== displayMode) {
+      setPrevDisplayMode(displayMode);
+    }
+  }, [displayMode, prevDisplayMode, providerName]);
+  
+  // Use context to get colors
+  const { state: { walletColorMap } } = useStaking();
 
-  // 2. Use the aggregation hook
-  // Pass the preProcessedData and specify 'value' as the key to aggregate
-  const processedChartData: ProcessedChartDataPoint[] = useChartAggregation(preProcessedData, 'value');
-
-  if (!processedChartData || processedChartData.length === 0) {
+  // If no data, display a message
+  if (!epochWalletData || epochWalletData.length === 0) {
     return (
       <div
         className={cn(
@@ -77,146 +125,160 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
           className
         )}
       >
-        No epoch data available for {providerName}.
+        {viewMode === 'staked'
+          ? `No staked amount data available for ${providerName}.`
+          : `No epoch data available for ${providerName}.`}
       </div>
     );
   }
 
-  // Define chart config with new color
-  const chartConfig = {
-    reward: {
-      label: "EGLD Reward",
-      // Use a vibrant blue - adjust HSL as needed
-      color: "hsl(210, 90%, 55%)", // Electronic Blue (example)
-    },
-  } satisfies ChartConfig;
+  // List of wallets (stable order)
+  const wallets = useMemo(() => {
+    return Object.keys(walletColorMap);
+  }, [walletColorMap]);
 
-  // Determine max value for setting upper bound buffer
-  const rewards = processedChartData.map(d => d.reward);
-  const maxY = rewards.length > 0 ? Math.max(...rewards) : 0;
-  const buffer = Math.max(maxY * 0.1, 0.5); // 10% buffer or at least 0.5
+  // Pre-calculate sums by epoch (direct calculation)
+  const processedData = useMemo(() => {
+    return precalculateEpochSums(epochWalletData, wallets);
+  }, [epochWalletData, wallets, providerName]);
 
-  // Set lower domain to 0, let Recharts handle upper bound with a buffer
-  const yDomain: [number | string, number | string] = [
-    0, // Start Y-axis at 0
-    `dataMax + ${buffer}` // Let Recharts calculate max + buffer
-  ];
+  // Calculate cumulative data (direct calculation)
+  const cumulativeData = useMemo(() => {
+    return calculateCumulativeData(processedData, wallets);
+  }, [processedData, wallets, providerName]);
 
-  // Generate a unique ID for the gradient fill (needed again)
-  const gradientId = `fill-provider-reward-${providerName.replace(/\s+/g, "-").toLowerCase()}`;
+  // Pre-calculate totals for cumulative data (direct calculation)
+  const processedCumulativeData = useMemo(() => {
+    return precalculateEpochSums(cumulativeData, wallets);
+  }, [cumulativeData, wallets, providerName]);
 
-  // Choose the correct parent chart component
+  // Select data based on display mode
+  const displayData = useMemo(() => {
+    return displayMode === "cumulative" ? processedCumulativeData : processedData;
+  }, [displayMode, processedCumulativeData, processedData, providerName]);
+
+  // Calculate Y-axis limits (direct calculation)
+  const yDomain = useMemo(() => {
+    return calculateYDomain(displayData, displayMode, wallets);
+  }, [displayData, displayMode, wallets, providerName]);
+
+  // Y-axis formatter
+  const yTickFormatter = useCallback((value: any) => {
+    if (typeof value !== 'number') return '';
+    // Adjust decimal places based on maximum value
+    const maxValue = yDomain[1];
+    const decimals = maxValue < 0.1 ? 4 : maxValue < 1 ? 3 : maxValue < 10 ? 2 : maxValue < 100 ? 1 : 0;
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+  }, [yDomain]);
+
+  // Choose parent component
   const ChartComponent = chartType === "bar" ? BarChart : AreaChart;
+
+  // Reduce the number of points for display
+  const optimizedDisplayData = useMemo(() => {
+    return reduceDataPoints(displayData);
+  }, [displayData]);
+
+  // Memoize common styles to avoid recalculations
+  const chartStyles = useMemo(() => ({
+    cartesianGrid: {
+      vertical: false,
+      strokeDasharray: "3 3",
+      stroke: "hsl(var(--border) / 0.5)"
+    },
+    xAxis: {
+      tickLine: false,
+      axisLine: false,
+      tickMargin: 8,
+      fontSize: 10,
+      minTickGap: 60
+    },
+    yAxis: {
+      tickLine: false,
+      axisLine: false,
+      tickMargin: 8,
+      fontSize: 10,
+      width: 80
+    }
+  }), []);
+
+  // Memoize chart components for each wallet
+  const chartElements = useMemo(() => {
+    const elements = wallets.map(wallet => {
+      const color = walletColorMap[wallet];
+      if (chartType === "bar") {
+        return (
+          <Bar
+            key={wallet}
+            dataKey={wallet}
+            fill={color}
+            stackId="stack"
+          />
+        );
+      } else {
+        return (
+          <Area
+            key={wallet}
+            dataKey={wallet}
+            stroke={color}
+            fill={color}
+            fillOpacity={0.5}
+            stackId="stack"
+          />
+        );
+      }
+    });
+    return elements;
+  }, [wallets, walletColorMap, chartType]);
 
   return (
     <ChartContainer
-      config={chartConfig}
-      className={cn("min-h-[250px] w-full h-full", className)}
+      config={{}}
+      className={cn("h-[450px] w-full", className)}
     >
-      <ResponsiveContainer width="100%" height="100%">
-        {/* Use the dynamic ChartComponent */}
-        <ChartComponent
-          accessibilityLayer
-          data={processedChartData}
-          margin={{
-            top: 10,
-            right: 10,
-            left: 5,
-            bottom: 15 // Ensure enough space for X-axis
-          }}
-          barGap={
-            chartType === "bar"
-              // Check original data length for bar gap decision if needed, or simplify
-              // Using processedChartData.length > 10 might be a simpler heuristic now
-              ? processedChartData.length > 10
-                ? 0
-                : 2
-              : undefined
-          }
-        >
-          {/* Define gradient for Area fill */}
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              {/* Use var(--color-reward) which is set by ChartContainer based on config */}
-              <stop
-                offset="5%"
-                stopColor="var(--color-reward)"
-                stopOpacity={0.8}
+      <div className="w-full h-full p-2">
+        <div className="h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ChartComponent
+              accessibilityLayer
+              data={optimizedDisplayData}
+              margin={{
+                top: 10,
+                right: 10,
+                left: 5,
+                bottom: 15
+              }}
+              barGap={chartType === "bar" ? 2 : undefined}
+            >
+              <CartesianGrid {...chartStyles.cartesianGrid} />
+              <XAxis 
+                dataKey="epoch"
+                {...chartStyles.xAxis}
               />
-              <stop
-                offset="95%"
-                stopColor="var(--color-reward)"
-                stopOpacity={0.1}
+              <YAxis
+                {...chartStyles.yAxis}
+                tickFormatter={yTickFormatter}
+                domain={yDomain}
               />
-            </linearGradient>
-          </defs>
-
-          <CartesianGrid
-            vertical={false}
-            strokeDasharray="3 3"
-            stroke="hsl(var(--border) / 0.5)"
-          />
-          <XAxis
-            dataKey="epoch"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            fontSize={10}
-            minTickGap={60}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            fontSize={10}
-            width={70}
-            domain={yDomain}
-            tickFormatter={(value) => {
-              if (typeof value !== 'number') return '';
-              return value.toLocaleString(undefined, { 
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 1
-              });
-            }}
-            allowDecimals={true}
-          />
-          <ChartTooltip
-            cursor={false}
-            content={
-              <ChartTooltipContent
-                // Use custom label if available (from aggregated data), else format epoch number
-                labelFormatter={(label, payload) =>
-                  payload?.[0]?.payload?.label || `Epoch ${label}`
-                }
-                formatter={(value) => formatEgld(value as number)}
-                indicator="dot"
+              <ChartTooltip
+                content={({ active, payload }) => (
+                  <ChartTooltipWrapper
+                    active={active}
+                    payload={payload as unknown as ChartPayload[]}
+                    walletColorMap={walletColorMap}
+                    displayMode={displayMode}
+                    viewMode={viewMode}
+                  />
+                )}
               />
-            }
-          />
-
-          {/* Conditional Rendering: Bar or Area */}
-          {chartType === "bar" ? (
-            <Bar
-              dataKey="reward"
-              fill="var(--color-reward)"
-              radius={
-                processedChartData.length > 10 // Use hook's config implicitly
-                  ? 0
-                  : 2
-              }
-            />
-          ) : (
-            <Area
-              dataKey="reward"
-              type="natural"
-              fill={`url(#${gradientId})`} // Re-add gradient fill
-              stroke="var(--color-reward)" // Use the config color variable
-              strokeWidth={2}
-              dot={false}
-            />
-          )}
-        </ChartComponent>
-      </ResponsiveContainer>
+              {chartElements}
+            </ChartComponent>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </ChartContainer>
   );
 };

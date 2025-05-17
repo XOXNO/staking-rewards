@@ -13,7 +13,8 @@ import {
     PieChart, 
     DatabaseZap, 
     CheckCircle, 
-    TrendingUp
+    TrendingUp,
+    MenuIcon
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Button } from '@/components/ui/button';
@@ -30,8 +31,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import { MenuIcon } from 'lucide-react';
-import { aggregateAllEpochData, calculateGlobalStats } from '@/lib/utils/calculationUtils';
+import { aggregateAllEpochData, calculateGlobalStats, aggregateEpochDataByWallet, aggregateStakingDataByWallet } from '@/lib/utils/calculationUtils';
 import { IProviderWithIdentity, IEpochRewardData, IXoxnoUserRewardsResponse } from '@/api/types/xoxno-rewards.types';
 import {
     Card, 
@@ -41,6 +41,10 @@ import {
     CardTitle 
 } from '@/components/ui/card';
 import { AddWalletDialog } from '@/components/dashboard/AddWalletDialog';
+import { AddWalletForm } from '@/components/dashboard/WalletInputForm/WalletInputForm';
+import { CHART_COLORS } from '@/lib/constants/chartColors';
+import { getWalletColorMap } from '@/lib/utils/chartUtils';
+import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 
 
 export default function HomePage(): React.ReactElement {
@@ -94,7 +98,7 @@ export default function HomePage(): React.ReactElement {
            return acc;
        }, {} as Record<string, boolean>);
    }, [selectedAddresses, isLoading]);
-  const { globalStats, aggregatedEpochData } = useMemo(() => {
+  const { globalStats, aggregatedEpochData, epochWalletData, stakingData, walletColorMap, allProvidersData, allProviderOwners } = useMemo(() => {
       
       // Use the refined loading states
       const isLoadingAnySelected = selectedAddresses.some(addr => relevantLoadingStates[addr]);
@@ -105,11 +109,11 @@ export default function HomePage(): React.ReactElement {
       // Wait until loading is complete for all selected addresses
       if (selectedAddresses.length === 0 || isLoadingAnySelected || !hasDataForAllSelected) {
           // Return null/empty state while loading or if data isn't ready
-          return { globalStats: null, aggregatedEpochData: [] }; 
+          return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], stakingData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} }; 
       }
       
       // --- Proceed with calculation only if all data is ready ---
-      const allProvidersData: Record<string, IEpochRewardData[]> = {}; 
+      const allProvidersData: Record<string, any[]> = {}; 
       const allProviderOwners: Record<string, string> = {};
       let providerDataFound = false; // Flag to check if any data was processed
 
@@ -119,7 +123,7 @@ export default function HomePage(): React.ReactElement {
               providerDataFound = true;
               Object.entries(response.providersFullRewardsData).forEach(([pAddr, data]) => {
                   if (!allProvidersData[pAddr]) allProvidersData[pAddr] = [];
-                  allProvidersData[pAddr].push(...data);
+                  allProvidersData[pAddr].push(...data.map(epoch => ({ ...epoch, walletAddress: addr })));
               });
           }
           response?.providersWithIdentityInfo?.forEach(p => {
@@ -130,7 +134,7 @@ export default function HomePage(): React.ReactElement {
       });
       
       if (!providerDataFound) {
-        return { globalStats: null, aggregatedEpochData: [] };
+        return { globalStats: null, aggregatedEpochData: [], epochWalletData: [], stakingData: [], walletColorMap: {}, allProvidersData: {}, allProviderOwners: {} };
       }
       
       const aggData = aggregateAllEpochData(
@@ -138,27 +142,54 @@ export default function HomePage(): React.ReactElement {
           allProviderOwners,
           selectedAddresses 
       );
+      const epochWalletData = aggregateEpochDataByWallet(
+          allProvidersData,
+          allProviderOwners,
+          selectedAddresses
+      );
+      const stakingData = aggregateStakingDataByWallet(
+          allProvidersData,
+          allProviderOwners,
+          selectedAddresses
+      );
+      const walletColorMap = getWalletColorMap(selectedAddresses, CHART_COLORS.categorical);
       const stats = calculateGlobalStats(aggData);
 
 
-      return { globalStats: stats, aggregatedEpochData: aggData };
+      return { globalStats: stats, aggregatedEpochData: aggData, epochWalletData, stakingData, walletColorMap, allProvidersData, allProviderOwners };
 
   }, [selectedAddresses, relevantRewardsData, relevantLoadingStates]); // Use refined dependencies
 
   const isAnyLoading = selectedAddresses.some(addr => isLoading[addr]);
   const anyError = selectedAddresses.find(addr => error[addr]);
 
+  const totalRewardsPerProvider: Record<string, number> = useMemo(() => {
+    const totals: Record<string, number> = {};
+    selectedAddresses.forEach(addr => {
+      const rewards = rewardsData[addr]?.totalRewardsPerProvider;
+      if (rewards) {
+        Object.entries(rewards).forEach(([provider, amount]) => {
+          totals[provider] = (totals[provider] || 0) + amount;
+        });
+      }
+    });
+    return totals;
+  }, [selectedAddresses, rewardsData]);
+
   let dashboardContent: React.ReactNode = null;
 
   if (addedAddresses.length > 0) {
       dashboardContent = (
            <div className="flex flex-1 overflow-hidden">
-               <aside className="w-72 hidden md:flex md:flex-col flex-shrink-0 border-r border-border/50">
+               <aside className="w-80 hidden md:flex md:flex-col flex-shrink-0 border-r border-border/50">
                    <div className="flex-grow overflow-y-auto">
                       <ProviderSidebar
                           providers={combinedProviders}
                           selectedProviderAddress={selectedProviderAddress}
                           onSelectProvider={handleSelectProvider}
+                          totalRewardsPerProvider={totalRewardsPerProvider}
+                          fullRewardsData={rewardsData}
+                          currentEpoch={selectedAddresses.reduce((epoch, addr) => rewardsData[addr]?.currentEpoch ?? epoch, 0)}
                       />
                    </div>
                </aside>
@@ -176,10 +207,15 @@ export default function HomePage(): React.ReactElement {
                            <GlobalDashboardView
                                globalStats={globalStats}
                                aggregatedEpochData={aggregatedEpochData}
+                               epochWalletData={epochWalletData}
+                               stakingData={stakingData}
+                               walletColorMap={walletColorMap}
                            />
                        ) : (
                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                               {isAnyLoading ? 'Calculating global overview...' : 'No global data available for selected wallets.'}
+                               {isAnyLoading ? (
+                                   <FunLoadingMessages />
+                               ) : 'No global data available for selected wallets.'}
                            </div>
                        )
                    ) : (
@@ -213,11 +249,9 @@ export default function HomePage(): React.ReactElement {
                   Connect multiple wallets, track aggregated rewards across all staking providers, and gain clear insights into your EGLD earnings.
               </p>
               {/* Add Wallet Button using the Dialog */}
-              <AddWalletDialog>
-                 <Button size="lg" className="px-8 py-6 text-lg">
-                      <Wallet className="mr-2 h-5 w-5" /> Add Your First Wallet
-                 </Button>
-              </AddWalletDialog>
+              <div className="flex justify-center w-full mt-8">
+                <AddWalletForm />
+              </div>
           </section>
 
           {/* Features Section */}
@@ -225,7 +259,7 @@ export default function HomePage(): React.ReactElement {
               <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                   {/* Feature 1 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <Wallet className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Multi-Wallet Aggregation</CardTitle>
@@ -237,7 +271,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                   {/* Feature 2 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <BarChart3 className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Detailed Provider Insights</CardTitle>
@@ -249,7 +283,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                   {/* Feature 3 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <TrendingUp className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Clear Visualizations</CardTitle>
@@ -261,7 +295,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 4 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <DatabaseZap className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Direct Blockchain Data</CardTitle>
@@ -273,7 +307,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 5 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <PieChart className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Global Overview</CardTitle>
@@ -285,7 +319,7 @@ export default function HomePage(): React.ReactElement {
                       </CardContent>
                   </Card>
                    {/* Feature 6 */}
-                  <Card className="text-center">
+                  <Card className="text-center transition-transform duration-200 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.025]">
                       <CardHeader>
                           <CheckCircle className="h-10 w-10 mx-auto mb-4 text-primary" />
                           <CardTitle>Simple & Clean Interface</CardTitle>
@@ -313,7 +347,7 @@ export default function HomePage(): React.ReactElement {
                               <span className="sr-only">Select Provider</span>
                           </Button>
                       </SheetTrigger>
-                      <SheetContent side="left" className="w-72 flex flex-col p-0">
+                      <SheetContent side="left" className="w-80 flex flex-col p-0">
                            <SheetHeader className="p-4 border-b border-border/50 flex-shrink-0">
                               <SheetTitle className="text-lg font-semibold tracking-tight">
                                   Providers
@@ -325,6 +359,9 @@ export default function HomePage(): React.ReactElement {
                                   selectedProviderAddress={selectedProviderAddress}
                                   onSelectProvider={handleSelectProvider} 
                                   onItemClick={() => setIsSheetOpen(false)}
+                                  totalRewardsPerProvider={totalRewardsPerProvider}
+                                  fullRewardsData={rewardsData}
+                                  currentEpoch={selectedAddresses.reduce((epoch, addr) => rewardsData[addr]?.currentEpoch ?? epoch, 0)}
                                />
                            </div>
                       </SheetContent>

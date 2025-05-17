@@ -1,2 +1,3 @@
 export * from './ProviderEpochChart';
-export * from './GlobalEpochChart'; 
+export { GlobalEpochChart } from './GlobalEpochChart';
+export { GlobalStakedChart } from './GlobalStakedChart'; 

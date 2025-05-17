@@ -20,11 +20,12 @@ export interface IStakingState {
   /** 
    * A map storing rewards data keyed by wallet address.
    */
-  rewardsData: Record<string, IXoxnoUserRewardsResponse | null>; // Allow null for addresses with fetch errors
+  rewardsData: Record<string, IXoxnoUserRewardsResponse>;
   /** Loading state keyed by wallet address */
   isLoading: Record<string, boolean>;
   /** Error state keyed by wallet address */
   error: Record<string, XoxnoApiError | string | null>;
+  walletColorMap: Record<string, string>;
 }
 
 /**
@@ -39,7 +40,9 @@ export type StakingAction =
   | { type: 'FETCH_REWARDS_SUCCESS'; payload: { address: string; data: IXoxnoUserRewardsResponse } }
   | { type: 'FETCH_REWARDS_FAILURE'; payload: { address: string; error: XoxnoApiError | string } }
   | { type: 'SELECT_PROVIDER'; payload: { providerAddress: string | null } }
-  | { type: 'CLEAR_ADDRESS_ERROR'; payload: { address: string } };
+  | { type: 'CLEAR_ADDRESS_ERROR'; payload: { address: string } }
+  | { type: 'SET_WALLET_COLOR'; payload: { address: string; color: string } }
+  | { type: 'UPDATE_WALLET_COLORS'; payload: { colorMap: Record<string, string> } };
 
 /**
  * Describes the shape of the Staking Context, including state and dispatch function.
@@ -47,5 +50,6 @@ export type StakingAction =
 export interface IStakingContextProps {
   state: IStakingState;
   dispatch: React.Dispatch<StakingAction>;
+  setWalletColor: (address: string, color: string) => void;
   // Action functions will be added in the useStaking hook
 } 
