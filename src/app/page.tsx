@@ -24,6 +24,7 @@ import { ProviderDetailView } from '@/components/dashboard/ProviderDetailView';
 import { GlobalDashboardView } from '@/components/dashboard/GlobalDashboardView';
 import { WalletManagementBar } from '@/components/dashboard/WalletManagementBar';
 import { shortenAddress } from '@/lib/utils/formatters';
+import { ExportButton } from '@/components/dashboard/ExportButton';
 import {
     Sheet,
     SheetContent,
@@ -375,6 +376,9 @@ export default function HomePage(): React.ReactElement {
                  <span className="text-sm text-muted-foreground hidden md:inline">
                      {selectedAddresses.length === 1 ? `Wallet: ${shortenAddress(selectedAddresses[0])}` : `Viewing ${selectedAddresses.length} Wallets`}
                  </span>
+             )}
+             {selectedAddresses.length > 0 && (
+                 <ExportButton className="hidden sm:flex" />
              )}
              <ThemeToggle />
              {addedAddresses.length > 0 && (

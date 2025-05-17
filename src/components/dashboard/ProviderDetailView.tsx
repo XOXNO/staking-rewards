@@ -31,6 +31,7 @@ import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletDistribution } from './WalletDistribution';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
+import { EpochStats } from '@/components/dashboard/EpochStats';
 
 interface IProviderDetailViewProps {
   selectedAddresses: string[];
@@ -206,36 +207,12 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
             <p className="text-muted-foreground mb-1">Total Rewarded (Selected Wallets)</p>
             <p className="text-xl font-semibold font-mono">{formatEgld(totalProviderRewards)}</p>
           </div>
-          <div className="border-b sm:border-b-0 sm:border-r lg:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
-            <p className="text-muted-foreground mb-2 font-medium">Last 7 Epochs</p>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg:</span>
-              <span className="font-mono">{formatEgld(stats7.avg)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Min:</span>
-              <span className="font-mono">{formatEgld(stats7.min)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Max:</span>
-              <span className="font-mono">{formatEgld(stats7.max)}</span>
-            </div>
-          </div>
-          <div>
-            <p className="text-muted-foreground mb-2 font-medium">Last 30 Epochs</p>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg:</span>
-              <span className="font-mono">{formatEgld(stats30.avg)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Min:</span>
-              <span className="font-mono">{formatEgld(stats30.min)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Max:</span>
-              <span className="font-mono">{formatEgld(stats30.max)}</span>
-            </div>
-          </div>
+          <EpochStats 
+            stats7={stats7} 
+            stats30={stats30} 
+            showMinMax={true} 
+            className="col-span-2"
+          />
         </CardContent>
         {selectedAddresses.length > 1 && (
           <WalletDistribution
