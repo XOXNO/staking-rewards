@@ -458,10 +458,7 @@ export default function HomePage(): React.ReactElement {
          </div>
        </header>
        
-       {/* WalletManagementBar is only shown when wallets are added */} 
-       {addedAddresses.length > 0 && (
-           <WalletManagementBar className="sticky top-14 z-20" />
-       )} 
+       
 
       {/* WalletManagementBar is only shown when wallets are added */}
       {addedAddresses.length > 0 && (
