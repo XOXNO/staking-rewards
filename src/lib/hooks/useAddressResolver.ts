@@ -16,6 +16,7 @@ interface IUsernameResponse {
     nonce: number;
     shard: number;
     isGuarded: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any; // Pour les autres propriétés de la réponse
 }
 

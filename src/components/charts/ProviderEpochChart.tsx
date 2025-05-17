@@ -18,15 +18,19 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart"; // Use shadcn chart components
-import { IEpochRewardData } from "@/api/types/xoxno-rewards.types";
 import { cn } from "@/lib/utils/cn";
-import { useChartAggregation } from "@/lib/hooks/useChartAggregation";
-import { ChartTooltipWrapper, type ChartPayload } from "@/components/ui/chart/ChartTooltipWrapper";
-import { calculateCumulativeData, precalculateEpochSums, calculateYDomain } from "@/lib/utils/chartUtils";
+import {
+  ChartTooltipWrapper,
+  type ChartPayload,
+} from "@/components/ui/chart/ChartTooltipWrapper";
+import {
+  calculateCumulativeData,
+  precalculateEpochSums,
+  calculateYDomain,
+} from "@/lib/utils/chartUtils";
 import { useStaking } from "@/lib/context/StakingContext";
 import { DisplayMode } from "@/components/dashboard/ChartToggles";
 
@@ -46,7 +50,7 @@ interface IProviderEpochChartProps {
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
   className?: string;
-  viewMode?: 'rewards' | 'staked';
+  viewMode?: "rewards" | "staked";
 }
 
 /**
@@ -58,37 +62,37 @@ function reduceDataPoints(
   targetPoints: number = 200 // Target number of points for smooth rendering
 ): IWalletEpochChartData[] {
   if (data.length <= targetPoints) return data;
-  
+
   const step = Math.max(1, Math.floor(data.length / targetPoints));
   const result: IWalletEpochChartData[] = [];
-  
+
   for (let i = 0; i < data.length; i += step) {
     const chunk = data.slice(i, i + step);
     const aggregated: IWalletEpochChartData = {
       epoch: chunk[0].epoch, // Keep the first epoch of the group
     };
-    
+
     // Calculate the average for each wallet on this group of points
-    chunk.forEach(point => {
+    chunk.forEach((point) => {
       Object.entries(point).forEach(([key, value]) => {
-        if (key === 'epoch') return;
-        if (typeof value === 'number') {
+        if (key === "epoch") return;
+        if (typeof value === "number") {
           if (!aggregated[key]) aggregated[key] = 0;
-          aggregated[key] = (aggregated[key] as number) + (value / chunk.length);
+          aggregated[key] = (aggregated[key] as number) + value / chunk.length;
         }
       });
     });
-    
+
     // Optimize numbers
     Object.entries(aggregated).forEach(([key, value]) => {
-      if (key !== 'epoch' && typeof value === 'number') {
+      if (key !== "epoch" && typeof value === "number") {
         aggregated[key] = Number(value.toFixed(6));
       }
     });
-    
+
     result.push(aggregated);
   }
-  
+
   return result;
 }
 
@@ -101,10 +105,11 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   chartType,
   displayMode,
   className,
-  viewMode = 'rewards',
+  viewMode = "rewards",
 }) => {
   // Add state to track displayMode changes
-  const [prevDisplayMode, setPrevDisplayMode] = useState<DisplayMode>(displayMode);
+  const [prevDisplayMode, setPrevDisplayMode] =
+    useState<DisplayMode>(displayMode);
 
   // Effect to detect and handle displayMode changes
   useEffect(() => {
@@ -112,25 +117,11 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
       setPrevDisplayMode(displayMode);
     }
   }, [displayMode, prevDisplayMode, providerName]);
-  
-  // Use context to get colors
-  const { state: { walletColorMap } } = useStaking();
 
-  // If no data, display a message
-  if (!epochWalletData || epochWalletData.length === 0) {
-    return (
-      <div
-        className={cn(
-          "text-center text-muted-foreground text-sm py-8",
-          className
-        )}
-      >
-        {viewMode === 'staked'
-          ? `No staked amount data available for ${providerName}.`
-          : `No epoch data available for ${providerName}.`}
-      </div>
-    );
-  }
+  // Use context to get colors
+  const {
+    state: { walletColorMap },
+  } = useStaking();
 
   // List of wallets (stable order)
   const wallets = useMemo(() => {
@@ -154,7 +145,9 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
 
   // Select data based on display mode
   const displayData = useMemo(() => {
-    return displayMode === "cumulative" ? processedCumulativeData : processedData;
+    return displayMode === "cumulative"
+      ? processedCumulativeData
+      : processedData;
   }, [displayMode, processedCumulativeData, processedData, providerName]);
 
   // Calculate Y-axis limits (direct calculation)
@@ -163,16 +156,28 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   }, [displayData, displayMode, wallets, providerName]);
 
   // Y-axis formatter
-  const yTickFormatter = useCallback((value: any) => {
-    if (typeof value !== 'number') return '';
-    // Adjust decimal places based on maximum value
-    const maxValue = yDomain[1];
-    const decimals = maxValue < 0.1 ? 4 : maxValue < 1 ? 3 : maxValue < 10 ? 2 : maxValue < 100 ? 1 : 0;
-    return value.toLocaleString(undefined, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-  }, [yDomain]);
+  const yTickFormatter = useCallback(
+    (value: unknown) => {
+      if (typeof value !== "number") return "";
+      // Adjust decimal places based on maximum value
+      const maxValue = yDomain[1];
+      const decimals =
+        maxValue < 0.1
+          ? 4
+          : maxValue < 1
+          ? 3
+          : maxValue < 10
+          ? 2
+          : maxValue < 100
+          ? 1
+          : 0;
+      return value.toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      });
+    },
+    [yDomain]
+  );
 
   // Choose parent component
   const ChartComponent = chartType === "bar" ? BarChart : AreaChart;
@@ -183,40 +188,38 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   }, [displayData]);
 
   // Memoize common styles to avoid recalculations
-  const chartStyles = useMemo(() => ({
-    cartesianGrid: {
-      vertical: false,
-      strokeDasharray: "3 3",
-      stroke: "hsl(var(--border) / 0.5)"
-    },
-    xAxis: {
-      tickLine: false,
-      axisLine: false,
-      tickMargin: 8,
-      fontSize: 10,
-      minTickGap: 60
-    },
-    yAxis: {
-      tickLine: false,
-      axisLine: false,
-      tickMargin: 8,
-      fontSize: 10,
-      width: 80
-    }
-  }), []);
+  const chartStyles = useMemo(
+    () => ({
+      cartesianGrid: {
+        vertical: false,
+        strokeDasharray: "3 3",
+        stroke: "hsl(var(--border) / 0.5)",
+      },
+      xAxis: {
+        tickLine: false,
+        axisLine: false,
+        tickMargin: 8,
+        fontSize: 10,
+        minTickGap: 60,
+      },
+      yAxis: {
+        tickLine: false,
+        axisLine: false,
+        tickMargin: 8,
+        fontSize: 10,
+        width: 80,
+      },
+    }),
+    []
+  );
 
   // Memoize chart components for each wallet
   const chartElements = useMemo(() => {
-    const elements = wallets.map(wallet => {
+    const elements = wallets.map((wallet) => {
       const color = walletColorMap[wallet];
       if (chartType === "bar") {
         return (
-          <Bar
-            key={wallet}
-            dataKey={wallet}
-            fill={color}
-            stackId="stack"
-          />
+          <Bar key={wallet} dataKey={wallet} fill={color} stackId="stack" />
         );
       } else {
         return (
@@ -234,11 +237,24 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
     return elements;
   }, [wallets, walletColorMap, chartType]);
 
+  // If no data, display a message
+  if (!epochWalletData || epochWalletData.length === 0) {
+    return (
+      <div
+        className={cn(
+          "text-center text-muted-foreground text-sm py-8",
+          className
+        )}
+      >
+        {viewMode === "staked"
+          ? `No staked amount data available for ${providerName}.`
+          : `No epoch data available for ${providerName}.`}
+      </div>
+    );
+  }
+
   return (
-    <ChartContainer
-      config={{}}
-      className={cn("h-[450px] w-full", className)}
-    >
+    <ChartContainer config={{}} className={cn("h-[450px] w-full", className)}>
       <div className="w-full h-full p-2">
         <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -249,15 +265,12 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
                 top: 10,
                 right: 10,
                 left: 5,
-                bottom: 15
+                bottom: 15,
               }}
               barGap={chartType === "bar" ? 2 : undefined}
             >
               <CartesianGrid {...chartStyles.cartesianGrid} />
-              <XAxis 
-                dataKey="epoch"
-                {...chartStyles.xAxis}
-              />
+              <XAxis dataKey="epoch" {...chartStyles.xAxis} />
               <YAxis
                 {...chartStyles.yAxis}
                 tickFormatter={yTickFormatter}

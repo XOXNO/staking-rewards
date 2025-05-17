@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { TooltipProps } from 'recharts';
-import { formatEgld, shortenAddress } from '@/lib/utils/formatters';
+import { shortenAddress } from '@/lib/utils/formatters';
 import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
 interface IChartTooltipContentProps extends TooltipProps<ValueType, NameType> {

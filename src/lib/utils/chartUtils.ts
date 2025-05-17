@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @file chartUtils.ts
  * @description Utilities for charts and chart data manipulation
@@ -10,24 +11,6 @@
  */
 function optimizeNumber(value: number, decimals: number = 6): number {
   return Number(value.toFixed(decimals));
-}
-
-/**
- * Optimizes a data object for storage
- * @param data Object to optimize
- */
-function optimizeDataForStorage<T extends Record<string, any>>(data: T): T {
-  const result: Record<string, any> = {};
-  
-  for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'number' && key !== 'epoch') {
-      result[key] = optimizeNumber(value);
-    } else {
-      result[key] = value;
-    }
-  }
-  
-  return result as T;
 }
 
 /**
@@ -161,6 +144,7 @@ export function precalculateEpochSums(
  * @returns Limits in the form [min, max]
  */
 export function calculateYDomain(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Array<{ _total?: number; [key: string]: any }>,
   displayMode: string,
   wallets?: string[]

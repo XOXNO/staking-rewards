@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @file AddWalletForm.tsx
  * @description Component for adding a new wallet address.
@@ -28,6 +29,7 @@ interface IUsernameResponse {
     nonce: number;
     shard: number;
     isGuarded: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any; // For other properties in the response
 }
 

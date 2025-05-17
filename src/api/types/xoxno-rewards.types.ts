@@ -14,6 +14,9 @@ export interface IEpochRewardData {
   ownerRewards: number;
 }
 
+export interface IEpochRewardDataExtended extends IEpochRewardData {
+  walletAddress: string;
+}
 /**
  * Represents the detailed identity information for a staking provider.
  */

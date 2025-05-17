@@ -7,7 +7,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
-import { TextShimmer } from './text-shimmer';
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -81,7 +80,7 @@ const AnimatedLetters = ({ text }: { text: string }) => {
 
 export const FunLoadingMessages: React.FC<IFunLoadingMessagesProps> = ({
     className,
-    mainMessage = "Calculating global overview...",
+    // mainMessage = "Calculating global overview...",
     spacing = 'default'
 }) => {
     const [currentMessage, setCurrentMessage] = useState(() => getRandomMessage(null));
