@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
@@ -15,6 +15,8 @@ import { GlobalEpochChart, GlobalStakedChart } from '@/components/charts';
 import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
 import { WalletPercentBar } from './WalletPercentBar';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
+import { EpochStats } from '@/components/dashboard/EpochStats';
+import type { IEpochStats } from '@/components/dashboard/EpochStats';
 
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
@@ -42,6 +44,31 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
     const [viewMode, setViewMode] = useState<ViewMode>('rewards');
 
+    // Calculer les statistiques complètes pour les epochs
+    const stats7 = useMemo<IEpochStats>(() => {
+        const recentEpochs = aggregatedEpochData.slice(0, 7);
+        if (recentEpochs.length === 0) return { min: 0, max: 0, avg: 0 };
+        
+        const values = recentEpochs.map(e => e.totalReward);
+        return {
+            min: Math.min(...values),
+            max: Math.max(...values),
+            avg: globalStats.avg7 || values.reduce((a, b) => a + b, 0) / values.length
+        };
+    }, [aggregatedEpochData, globalStats.avg7]);
+
+    const stats30 = useMemo<IEpochStats>(() => {
+        const recentEpochs = aggregatedEpochData.slice(0, 30);
+        if (recentEpochs.length === 0) return { min: 0, max: 0, avg: 0 };
+        
+        const values = recentEpochs.map(e => e.totalReward);
+        return {
+            min: Math.min(...values),
+            max: Math.max(...values),
+            avg: globalStats.avg30 || values.reduce((a, b) => a + b, 0) / values.length
+        };
+    }, [aggregatedEpochData, globalStats.avg30]);
+
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center">
@@ -62,22 +89,19 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                     <CardTitle>Global Statistics</CardTitle>
                     <CardDescription>Aggregated across selected wallets and providers.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-sm">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 text-sm">
                     {/* Total Column */}
                     <div className="border-b sm:border-b-0 sm:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
                         <p className="text-muted-foreground mb-1">Total Rewarded</p>
                         <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.totalRewards)}</p>
                     </div>
-                    {/* Last 7 Epochs */}
-                    <div className="border-b sm:border-b-0 sm:border-r border-border/50 pb-4 sm:pb-0 sm:pr-6">
-                        <p className="text-muted-foreground mb-1">Last 7 Epochs Avg</p>
-                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avg7)}</p>
-                    </div>
-                    {/* Last 30 Epochs */}
-                    <div>
-                        <p className="text-muted-foreground mb-1">Last 30 Epochs Avg</p>
-                        <p className="text-xl font-semibold font-mono">{formatEgld(globalStats.avg30)}</p>
-                    </div>
+                    {/* Epoch Stats - avec showMinMax à true pour afficher les mêmes statistiques que ProviderDetailView */}
+                    <EpochStats 
+                        stats7={stats7} 
+                        stats30={stats30} 
+                        showMinMax={true} 
+                        className="col-span-2"
+                    />
                 </CardContent>
                 {/* Wallet Percent Bar - only if several addresses */}
                 {Object.keys(walletColorMap).length > 1 && globalStats.totalRewardsPerWallet && (

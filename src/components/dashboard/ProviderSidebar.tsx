@@ -6,7 +6,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useStaking } from '@/lib/context/StakingContext';
 import Image from 'next/image';
 import { IProviderWithIdentity } from '@/api/types/xoxno-rewards.types';
@@ -66,13 +66,13 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
         onItemClick?.();
     };
     
-    const sortedProviders = React.useMemo(() => {
+    const sortedProviders = useMemo(() => {
       if (!providers) return [];
       return [...providers].sort((a, b) => {
         const aReward = totalRewardsPerProvider?.[a.provider] ?? 0;
         const bReward = totalRewardsPerProvider?.[b.provider] ?? 0;
         if (aReward === bReward) {
-          // fallback: tri alphabétique
+          // fallback: alphabetical sorting
           return (a.identityInfo?.name || a.identity || a.provider)
             .localeCompare(b.identityInfo?.name || b.identity || b.provider);
         }
@@ -80,9 +80,15 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
       });
     }, [providers, totalRewardsPerProvider, sortOrder]);
 
+    // Calculate total rewards across all providers
+    const totalRewards = useMemo(() => {
+      if (!totalRewardsPerProvider) return 0;
+      return Object.values(totalRewardsPerProvider).reduce((sum, amount) => sum + amount, 0);
+    }, [totalRewardsPerProvider]);
+
     const isCurrentlyStaked = (provider: IProviderWithIdentity) => {
       if (!fullRewardsData || !currentEpoch) return false;
-      // Agrège tous les epochs de tous les wallets sélectionnés pour ce provider
+      // Aggregate all epochs from all selected wallets for this provider
       let lastEpoch: number | undefined = undefined;
       Object.values(fullRewardsData).forEach((rewards) => {
         const epochs = rewards?.providersFullRewardsData?.[provider.provider];
@@ -161,8 +167,18 @@ export const ProviderSidebar: React.FC<IProviderSidebarProps> = ({
                         className="w-full justify-start h-12 px-3 mb-1"
                         onClick={() => handleItemClick(null)}
                     >
-                        <span className="flex-1 text-left truncate font-medium">
-                            All Providers Overview
+                        <span className="flex-1 min-w-0 flex items-center justify-between">
+                            <span
+                                className="block truncate overflow-hidden whitespace-nowrap text-ellipsis"
+                                style={{ maxWidth: 'calc(100% - 80px)' }}
+                            >
+                                All Providers Overview
+                            </span>
+                            {totalRewardsPerProvider && (
+                                <span className="ml-2 text-xs text-muted-foreground font-mono tabular-nums flex-shrink-0 text-right">
+                                    {totalRewards.toLocaleString('en-US', { maximumFractionDigits: 3 })} EGLD
+                                </span>
+                            )}
                         </span>
                     </Button>
                     

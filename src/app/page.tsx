@@ -8,22 +8,23 @@
 
 import React, { useCallback, useState, useMemo } from "react";
 import {
-  Wallet,
-  BarChart3,
-  PieChart,
-  DatabaseZap,
-  CheckCircle,
-  TrendingUp,
-  MenuIcon,
-} from "lucide-react";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { Button } from "@/components/ui/button";
-import { useStaking } from "@/lib/context/StakingContext";
-import { ProviderSidebar } from "@/components/dashboard/ProviderSidebar";
-import { ProviderDetailView } from "@/components/dashboard/ProviderDetailView";
-import { GlobalDashboardView } from "@/components/dashboard/GlobalDashboardView";
-import { WalletManagementBar } from "@/components/dashboard/WalletManagementBar";
-import { shortenAddress } from "@/lib/utils/formatters";
+    Wallet, 
+    BarChart3, 
+    PieChart, 
+    DatabaseZap, 
+    CheckCircle, 
+    TrendingUp,
+    MenuIcon
+} from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { useStaking } from '@/lib/context/StakingContext';
+import { ProviderSidebar } from '@/components/dashboard/ProviderSidebar';
+import { ProviderDetailView } from '@/components/dashboard/ProviderDetailView';
+import { GlobalDashboardView } from '@/components/dashboard/GlobalDashboardView';
+import { WalletManagementBar } from '@/components/dashboard/WalletManagementBar';
+import { shortenAddress } from '@/lib/utils/formatters';
+import { ExportButton } from '@/components/dashboard/ExportButton';
 import {
   Sheet,
   SheetContent,
@@ -441,22 +442,23 @@ export default function HomePage(): React.ReactElement {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
-          {selectedAddresses.length > 0 && (
-            <span className="text-sm text-muted-foreground hidden md:inline">
-              {selectedAddresses.length === 1
-                ? `Wallet: ${shortenAddress(selectedAddresses[0])}`
-                : `Viewing ${selectedAddresses.length} Wallets`}
-            </span>
-          )}
-          <ThemeToggle />
-          {addedAddresses.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleSearchAnother}>
-              Reset
-            </Button>
-          )}
-        </div>
-      </header>
+         <div className="flex items-center gap-2 md:gap-4">
+             {selectedAddresses.length > 0 && (
+                 <span className="text-sm text-muted-foreground hidden md:inline">
+                     {selectedAddresses.length === 1 ? `Wallet: ${shortenAddress(selectedAddresses[0])}` : `Viewing ${selectedAddresses.length} Wallets`}
+                 </span>
+             )}
+             {selectedAddresses.length > 0 && (
+                 <ExportButton className="hidden sm:flex" />
+             )}
+             <ThemeToggle />
+             {addedAddresses.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleSearchAnother}>Reset</Button>
+             )}
+         </div>
+       </header>
+       
+       
 
       {/* WalletManagementBar is only shown when wallets are added */}
       {addedAddresses.length > 0 && (
