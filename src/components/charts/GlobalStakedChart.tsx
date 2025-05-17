@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/chart";
 import { cn } from '@/lib/utils/cn';
 import { formatEgld, shortenAddress } from '@/lib/utils/formatters';
+import { useStaking } from '@/lib/context/StakingContext/StakingContext';
 
 interface IStakingDataPoint {
     epoch: number;
@@ -30,7 +31,7 @@ interface IStakingDataPoint {
 
 interface IGlobalStakedChartProps {
     stakingData: IStakingDataPoint[];  // Renommé pour clarifier que c'est du staking, pas des rewards
-    walletColorMap: Record<string, string>;
+    walletColorMap?: Record<string, string>; // Rendu optionnel car on utilise maintenant le contexte
     className?: string;
 }
 
@@ -39,9 +40,15 @@ interface IGlobalStakedChartProps {
  */
 export const GlobalStakedChart: React.FC<IGlobalStakedChartProps> = ({
     stakingData,
-    walletColorMap,
+    walletColorMap: propWalletColorMap, // Renommé pour éviter la confusion
     className,
 }) => {
+    // Récupérer les couleurs depuis le contexte
+    const { state: { walletColorMap: contextWalletColorMap } } = useStaking();
+    
+    // Utiliser les couleurs du contexte, avec fallback sur les props si nécessaire
+    const walletColorMap = contextWalletColorMap || propWalletColorMap || {};
+
     if (!stakingData || stakingData.length === 0) {
         return (
             <div className={cn("text-center text-muted-foreground text-sm py-8", className)}>

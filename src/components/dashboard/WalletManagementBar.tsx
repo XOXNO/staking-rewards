@@ -6,17 +6,18 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useStaking } from "@/lib/context/StakingContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { XIcon, PlusIcon } from "lucide-react";
+import { XIcon, PlusIcon, LoaderIcon } from "lucide-react";
 import { shortenAddress } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/cn";
 import { ColorDotPicker } from './ColorDotPicker';
 import { useToast } from "@/hooks/use-toast";
+import { useAddressResolver } from "@/lib/hooks/useAddressResolver";
 
 interface IWalletManagementBarProps {
   className?: string;
@@ -29,45 +30,49 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
   const { addedAddresses, selectedAddresses, walletColorMap } = state;
   const [newAddress, setNewAddress] = useState("");
   const { toast } = useToast();
+  const { resolveAddress, isResolving } = useAddressResolver();
 
   // Handler pour ajouter une nouvelle adresse
-  const handleAddAddress = (e: React.FormEvent) => {
+  const handleAddAddress = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedAddress = newAddress.trim();
     
-    if (!trimmedAddress) return;
+    if (!newAddress.trim()) return;
 
     try {
+      // Résoudre l'adresse ou le herotag
+      const result = await resolveAddress(newAddress);
+      
+      if (result.error || !result.resolvedAddress) {
+        toast({
+          variant: "destructive",
+          title: "Address resolution failed",
+          description: result.error || "Unable to resolve the address",
+        });
+        return;
+      }
+      
+      const resolvedAddress = result.resolvedAddress;
+      
       // Vérifie si l'adresse existe déjà
-      if (addedAddresses.includes(trimmedAddress)) {
+      if (addedAddresses.includes(resolvedAddress)) {
         toast({
           variant: "default",
           title: "Address already exists",
-          description: `The address ${shortenAddress(trimmedAddress)} is already in your list.`,
+          description: `The address ${shortenAddress(resolvedAddress)} is already in your list.`,
           className: "bg-orange-500 text-white border-orange-600",
         });
         return;
       }
 
-      // Vérifie le format de l'adresse MVX (commence par 'erd' et a une longueur de 62 caractères)
-      if (!trimmedAddress.startsWith('erd') || trimmedAddress.length !== 62) {
-        toast({
-          variant: "destructive",
-          title: "Invalid MVX address",
-          description: "Please enter a valid MultiversX address starting with 'erd'.",
-        });
-        return;
-      }
-
       // Ajoute l'adresse
-      addAddress(trimmedAddress);
+      await addAddress(resolvedAddress);
       setNewAddress("");
       
       // Notification de succès
       toast({
         variant: "default",
         title: "Address added successfully",
-        description: `${shortenAddress(trimmedAddress)} has been added to your list.`,
+        description: `${shortenAddress(resolvedAddress)} has been added to your list.`,
         className: "bg-green-500 text-white border-green-600",
       });
 
@@ -79,7 +84,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
     }
-  };
+  }, [newAddress, resolveAddress, addedAddresses, addAddress, toast]);
 
   return (
     <div
@@ -94,11 +99,16 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
           type="text"
           value={newAddress}
           onChange={(e) => setNewAddress(e.target.value)}
-          placeholder="Enter MVX address..."
+          placeholder="Enter MVX address or herotag..."
           className="h-8 text-sm"
+          disabled={isResolving}
         />
-        <Button type="submit" variant="outline" size="sm" className="h-8">
-          <PlusIcon className="h-4 w-4" />
+        <Button type="submit" variant="outline" size="sm" className="h-8" disabled={!newAddress.trim() || isResolving}>
+          {isResolving ? (
+            <LoaderIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <PlusIcon className="h-4 w-4" />
+          )}
           <span className="sr-only">Add Wallet</span>
         </Button>
       </form>

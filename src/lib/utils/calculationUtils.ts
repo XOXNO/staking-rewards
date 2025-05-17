@@ -197,14 +197,14 @@ interface EpochRewardDataWithWallet extends IEpochRewardData {
 }
 
 /**
- * Agrège les rewards par wallet pour chaque epoch (pour stacked chart par wallet).
- * Peut être utilisée pour le global (tous providers) ou un provider spécifique.
+ * Aggregates rewards by wallet for each epoch (for stacked chart by wallet).
+ * Can be used for global (all providers) or a specific provider.
  *
- * @param allProvidersData - Record<provider, IEpochRewardData[]> (pour global) OU { [provider]: epochs[] } (pour un provider)
+ * @param allProvidersData - Record<provider, IEpochRewardData[]> (for global) OR { [provider]: epochs[] } (for a provider)
  * @param providerOwners - mapping provider -> owner
- * @param selectedAddresses - adresses sélectionnées
- * @param filterProvider - optionnel, provider à filtrer (pour provider chart)
- * @returns Array<{ epoch, [wallet]: montant }>
+ * @param selectedAddresses - selected addresses
+ * @param filterProvider - optional, provider to filter (for provider chart)
+ * @returns Array<{ epoch, [wallet]: amount }>
  */
 export function aggregateEpochDataByWallet(
   allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
@@ -248,11 +248,11 @@ export function aggregateEpochDataByWallet(
 }
 
 /**
- * Agrège les rewards par wallet pour chaque epoch d'un provider donné.
- * @param allProvidersData - Toutes les données de rewards (avec walletAddress)
+ * Aggregates rewards by wallet for each epoch of a given provider.
+ * @param allProvidersData - All reward data (with walletAddress)
  * @param providerOwners - Mapping provider -> owner
- * @param selectedAddresses - Wallets sélectionnés
- * @param provider - Provider à filtrer (obligatoire)
+ * @param selectedAddresses - Selected wallets
+ * @param provider - Provider to filter (required)
  * @returns Array<{ epoch: number; [wallet: string]: number }>
  */
 export function aggregateProviderEpochDataByWallet(
@@ -292,11 +292,11 @@ export function aggregateProviderEpochDataByWallet(
 }
 
 /**
- * Agrège les montants stakés par wallet pour chaque epoch.
+ * Aggregates staked amounts by wallet for each epoch.
  * @param allProvidersData - Record<provider, IEpochRewardData[]>
  * @param providerOwners - mapping provider -> owner
- * @param selectedAddresses - adresses sélectionnées
- * @returns Array<{ epoch, [wallet]: montant }>
+ * @param selectedAddresses - selected addresses
+ * @returns Array<{ epoch, [wallet]: amount }>
  */
 export function aggregateStakingDataByWallet(
   allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
@@ -315,7 +315,7 @@ export function aggregateStakingDataByWallet(
           epochWalletMap.set(epochData.epoch, {});
         }
         const walletMap = epochWalletMap.get(epochData.epoch)!;
-        // Ajouter le montant staké pour ce wallet à cet epoch
+        // Add the staked amount for this wallet at this epoch
         walletMap[wallet] = (walletMap[wallet] || 0) + (epochData.totalStaked || 0);
       }
     });

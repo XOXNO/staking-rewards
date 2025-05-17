@@ -1,6 +1,6 @@
 /**
  * @file ChartTooltipContent.tsx
- * @description Composant réutilisable pour les tooltips des graphiques
+ * @description Reusable component for chart tooltips
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -34,29 +34,29 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
     const tooltipRect = tooltip.getBoundingClientRect();
     const { x = 0, y = 0 } = coordinate;
     
-    // Calculer les positions relatives dans le graphique (en pourcentage)
+    // Calculate relative positions in the chart (in percentage)
     const relativeX = x / viewBox.width;
     const relativeY = y / viewBox.height;
     
-    // Déterminer la position du tooltip en fonction du quadrant
+    // Determine tooltip position based on quadrant
     let top = y;
     let left = x;
     
-    // Si on est dans la moitié droite du graphique
+    // If we're in the right half of the chart
     if (relativeX > 0.5) {
-      left = x - tooltipRect.width - 10; // 10px de marge
+      left = x - tooltipRect.width - 10; // 10px margin
     } else {
-      left = x + 10; // 10px de marge
+      left = x + 10; // 10px margin
     }
     
-    // Si on est dans la moitié basse du graphique
+    // If we're in the bottom half of the chart
     if (relativeY > 0.5) {
       top = y - tooltipRect.height - 10;
     } else {
       top = y + 10;
     }
 
-    // Assurer que le tooltip reste dans les limites du graphique
+    // Ensure tooltip stays within chart bounds
     top = Math.max(0, Math.min(top, viewBox.height - tooltipRect.height));
     left = Math.max(0, Math.min(left, viewBox.width - tooltipRect.width));
 
@@ -69,7 +69,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
 
   if (!active || !payload || payload.length === 0) return null;
 
-  // Filtrer les entrées avec des valeurs non nulles
+  // Filter entries with non-null values
   const nonZeroPayload = payload.filter(entry => {
     const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
     return value > 0;
@@ -77,23 +77,23 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
 
   if (nonZeroPayload.length === 0) return null;
 
-  // Calculer le total des valeurs non nulles
+  // Calculate total of non-null values
   const total = nonZeroPayload.reduce((sum, entry) => {
     const value = typeof entry.value === 'number' ? entry.value : Number(entry.value);
     return sum + value;
   }, 0);
 
-  // Calculer la date à partir de l'epoch (24 heures par epoch)
+  // Calculate date from epoch (24 hours per epoch)
   const epochStartDate = new Date('2020-07-30T15:00:00Z');
-  const epochDuration = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+  const epochDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
   const epochDate = new Date(epochStartDate.getTime() + (Number(label) * epochDuration));
-  const formattedDate = epochDate.toLocaleDateString('fr-FR', {
-    day: '2-digit',
+  const formattedDate = epochDate.toLocaleDateString('en-US', {
     month: '2-digit',
+    day: '2-digit',
     year: '2-digit'
   });
 
-  // Fonction utilitaire pour formater un nombre avec 6 décimales max
+  // Utility function to format a number with max 6 decimals
   const formatNumber = (amount: number): string => {
     const fixedAmount = amount.toFixed(6);
     return parseFloat(fixedAmount).toLocaleString('en-US', {
@@ -102,7 +102,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
     });
   };
 
-  // Fonction pour formater le pourcentage
+  // Function to format percentage
   const formatPercentage = (value: number, total: number): string => {
     const percentage = (value / total) * 100;
     return percentage.toFixed(1) + '%';
@@ -132,7 +132,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
         </div>
       </div>
       
-      {/* N'afficher que les wallets avec des valeurs non nulles */}
+      {/* Only display wallets with non-null values */}
       {nonZeroPayload.map(entry => {
         const wallet = typeof entry.name === 'string' ? entry.name : '';
         const color = wallet ? walletColorMap[wallet] : '#888';

@@ -1,57 +1,94 @@
 /**
  * @file chartUtils.ts
- * @description Utilitaires pour les graphiques et la manipulation de données de graphiques
+ * @description Utilities for charts and chart data manipulation
  */
 
 /**
- * Calcule les données cumulatives à partir des données par epoch
- * @param data Données par epoch avec valeurs par wallet
- * @param wallets Liste des wallets à inclure
- * @returns Données cumulatives avec les mêmes wallets
+ * Optimizes a number for storage by limiting decimal places
+ * @param value Value to optimize
+ * @param decimals Number of decimals to keep
+ */
+function optimizeNumber(value: number, decimals: number = 6): number {
+  return Number(value.toFixed(decimals));
+}
+
+/**
+ * Optimizes a data object for storage
+ * @param data Object to optimize
+ */
+function optimizeDataForStorage<T extends Record<string, any>>(data: T): T {
+  const result: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'number' && key !== 'epoch') {
+      result[key] = optimizeNumber(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  
+  return result as T;
+}
+
+/**
+ * Calculates cumulative data from epoch data
+ * @param data Epoch data with values by wallet
+ * @param wallets List of wallets to include
+ * @returns Cumulative data with the same wallets
  */
 export function calculateCumulativeData(
   data: Array<{ epoch: number; [wallet: string]: number | string }>,
   wallets: string[]
 ): Array<{ epoch: number; [wallet: string]: number }> {
-  const cumulativeData = data.map((epochData, index) => {
+  const walletRunningTotals: Record<string, number> = {};
+  wallets.forEach(wallet => {
+    walletRunningTotals[wallet] = 0;
+  });
+
+  // Sort data by epoch to ensure correct cumulative calculation
+  const sortedData = [...data].sort((a, b) => a.epoch - b.epoch);
+
+  const result = sortedData.map(epochData => {
     const cumulativeEntry: { epoch: number; [wallet: string]: number } = {
       epoch: epochData.epoch,
     };
 
+    // Process all wallets
     wallets.forEach(wallet => {
-      // Calculer le cumulatif pour ce wallet jusqu'à cet epoch
-      const cumulativeAmount = data
-        .slice(0, index + 1)
-        .reduce((sum, entry) => sum + Number(entry[wallet] || 0), 0);
-      
-      cumulativeEntry[wallet] = cumulativeAmount;
+      const value = Number(epochData[wallet] || 0);
+      // Update running total regardless of value
+      walletRunningTotals[wallet] += value;
+      // Add to result if it has a value
+      if (walletRunningTotals[wallet] > 0) {
+        cumulativeEntry[wallet] = optimizeNumber(walletRunningTotals[wallet]);
+      }
     });
 
     return cumulativeEntry;
   });
 
-  return cumulativeData;
+  return result;
 }
 
 /**
- * Trouve une couleur non utilisée dans la palette.
- * @param usedColors Set des couleurs déjà utilisées
- * @param palette Tableau des couleurs disponibles
- * @returns Une couleur non utilisée ou la première couleur si toutes sont utilisées
+ * Finds an unused color in the palette.
+ * @param usedColors Set of already used colors
+ * @param palette Array of available colors
+ * @returns An unused color or the first color if all are used
  */
 export function findUnusedColor(usedColors: Set<string>, palette: string[]): string {
-  // Cherche une couleur non utilisée
+  // Find an unused color
   const unusedColor = palette.find(color => !usedColors.has(color));
-  // Si toutes les couleurs sont utilisées, retourne la première couleur
+  // If all colors are used, return the first color
   return unusedColor || palette[0];
 }
 
 /**
- * Génère un mapping wallet -> couleur à partir d'une liste de wallets et d'une palette de couleurs.
- * @param wallets Liste des adresses de wallets
- * @param palette Tableau de couleurs hexadécimales
- * @param existingColorMap Mapping existant des couleurs (optionnel)
- * @returns Un objet { [wallet]: couleur }
+ * Generates a wallet -> color mapping from a list of wallets and a color palette.
+ * @param wallets List of wallet addresses
+ * @param palette Array of hexadecimal colors
+ * @param existingColorMap Existing color mapping (optional)
+ * @returns An object { [wallet]: color }
  */
 export function getWalletColorMap(
   wallets: string[], 
@@ -62,12 +99,94 @@ export function getWalletColorMap(
   const usedColors = new Set(Object.values(colorMap));
 
   wallets.forEach(wallet => {
-    // Si le wallet n'a pas déjà une couleur, lui en attribuer une non utilisée
     if (!colorMap[wallet]) {
       colorMap[wallet] = findUnusedColor(usedColors, palette);
       usedColors.add(colorMap[wallet]);
     }
   });
-
+  
   return colorMap;
+}
+
+/**
+ * Pre-calculates the sum of rewards for each epoch
+ * @param data Epoch data with values by wallet
+ * @param wallets List of wallets to include in the calculation
+ * @returns An array with the same epochs but with pre-calculated sums
+ */
+export function precalculateEpochSums(
+  data: Array<{ epoch: number; [wallet: string]: number | string }>,
+  wallets: string[]
+): Array<{ epoch: number; [wallet: string]: number | string; _total: number }> {
+  const result = data.map(epochData => {
+    // Calculate first the total
+    let totalForEpoch = 0;
+    const epochEntries: [string, number][] = [];
+    
+    // Collect wallets with non-zero values
+    wallets.forEach(wallet => {
+      const value = Number(epochData[wallet] || 0);
+      if (value !== 0) {
+        epochEntries.push([wallet, optimizeNumber(value)]);
+        totalForEpoch += value;
+      }
+    });
+    
+    // Build the final object with the correct type
+    const resultEntry: { 
+      epoch: number; 
+      _total: number;
+      [wallet: string]: number | string;
+    } = {
+      epoch: epochData.epoch,
+      _total: optimizeNumber(totalForEpoch)
+    };
+    
+    // Add non-zero wallets
+    epochEntries.forEach(([wallet, value]) => {
+      resultEntry[wallet] = value;
+    });
+    
+    return resultEntry;
+  });
+  
+  return result;
+}
+
+/**
+ * Calculates the Y axis limits based on data
+ * @param data Data with totals (either pre-calculated, or to calculate)
+ * @param displayMode Display mode (cumulative or daily)
+ * @param wallets List of wallets (used if no pre-calculated totals)
+ * @returns Limits in the form [min, max]
+ */
+export function calculateYDomain(
+  data: Array<{ _total?: number; [key: string]: any }>,
+  displayMode: string,
+  wallets?: string[]
+): [number, number] {
+  if (!data || data.length === 0) return [0, 1];
+  
+  let maxY: number;
+  
+  if ('_total' in (data[0] || {})) {
+    maxY = Math.max(...data.map(d => d._total as number));
+  } else if (wallets && wallets.length > 0) {
+    maxY = Math.max(
+      ...data.map(d => 
+        wallets.reduce((sum, w) => sum + Number(d[w] || 0), 0)
+      )
+    );
+  } else {
+    maxY = Math.max(
+      ...data.map(d => 
+        Object.entries(d)
+          .filter(([key]) => key !== 'epoch')
+          .reduce((sum, [_, val]) => sum + (typeof val === 'number' ? val : 0), 0)
+      )
+    );
+  }
+  
+  const buffer = maxY * (displayMode === "cumulative" ? 0.1 : 0.2);
+  return [0, optimizeNumber(maxY + buffer, 4)];
 } 

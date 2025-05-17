@@ -10,7 +10,7 @@ export interface UseWalletColorsReturn {
   resetWalletColors: () => void;
 }
 
-// Fonction utilitaire pour obtenir les couleurs sauvegardées
+// Utility function to get saved colors
 function getStorageValue(key: string): Record<string, string> | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -22,7 +22,7 @@ function getStorageValue(key: string): Record<string, string> | null {
   }
 }
 
-// Fonction utilitaire pour sauvegarder les couleurs
+// Utility function to save colors
 function setStorageValue(key: string, value: Record<string, string>): void {
   if (typeof window === 'undefined') return;
   try {
@@ -33,10 +33,10 @@ function setStorageValue(key: string, value: Record<string, string>): void {
 }
 
 export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
-  // État local pour le mapping wallet -> couleur
+  // Local state for wallet -> color mapping
   const [walletColorMap, setWalletColorMap] = useState<Record<string, string>>({});
   
-  // Effet pour charger les couleurs sauvegardées au montage du composant
+  // Effect to load saved colors when component mounts
   useEffect(() => {
     const savedColors = getStorageValue(STORAGE_KEY);
     if (savedColors) {
@@ -44,20 +44,20 @@ export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
     }
   }, []);
 
-  // Met à jour le mapping quand la liste d'adresses change
+  // Update the mapping when address list changes
   useEffect(() => {
     setWalletColorMap(prev => {
-      // Génère un nouveau mapping en tenant compte des couleurs existantes
+      // Generate a new mapping considering existing colors
       const newColorMap = getWalletColorMap(addresses, CHART_COLORS.categorical, prev);
       
-      // Sauvegarde dans le localStorage
+      // Save to localStorage
       setStorageValue(STORAGE_KEY, newColorMap);
       
       return newColorMap;
     });
   }, [addresses]);
 
-  // Fonction pour modifier la couleur d'un wallet
+  // Function to change a wallet's color
   const setWalletColor = (address: string, color: string) => {
     setWalletColorMap(prev => {
       const updated = { ...prev, [address]: color };
@@ -66,7 +66,7 @@ export function useWalletColors(addresses: string[]): UseWalletColorsReturn {
     });
   };
 
-  // Fonction pour réinitialiser toutes les couleurs
+  // Function to reset all colors
   const resetWalletColors = () => {
     const newColorMap = getWalletColorMap(addresses, CHART_COLORS.categorical);
     setStorageValue(STORAGE_KEY, newColorMap);

@@ -20,7 +20,7 @@ interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
     aggregatedEpochData: IAggregatedEpochData[];
     epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
-    stakingData: Array<{ epoch: number; [wallet: string]: number }>;  // Données de staking par epoch et par wallet
+    stakingData: Array<{ epoch: number; [wallet: string]: number }>;  // Staking data by epoch and by wallet
     walletColorMap: Record<string, string>;
     className?: string;
     isLoading?: boolean;
@@ -51,7 +51,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     }
 
     return (
-        <div className={cn('flex flex-col space-y-6 p-4 md:p-6 h-full', className)}>
+        <div className={cn('flex flex-col space-y-6 p-4 md:p-6', className)}>
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">All Providers Overview</h2>
             </div>
@@ -90,7 +90,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
             </Card>
 
             {/* Chart Section */}
-            <Card className="bg-card/80 border-border/50 flex flex-col flex-grow overflow-hidden">
+            <Card className="bg-card/80 border-border/50 flex flex-col flex-grow">
                 <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-2">
                     <div>
                         <CardTitle>

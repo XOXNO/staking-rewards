@@ -36,7 +36,7 @@ const funMessages = [
     "Hunting for those sweet EGLD rewards... 🎯",
 ];
 
-// Fonction pour obtenir un message aléatoire différent du message actuel
+// Function to get a random message different from the current one
 const getRandomMessage = (currentMessage: string | null): string => {
     const availableMessages = currentMessage 
         ? funMessages.filter(msg => msg !== currentMessage)
@@ -45,14 +45,14 @@ const getRandomMessage = (currentMessage: string | null): string => {
     return availableMessages[randomIndex];
 };
 
-// Fonction pour séparer le texte en préservant les emojis et les espaces
+// Function to split text while preserving emojis and spaces
 const splitTextPreservingEmojis = (text: string): string[] => {
-    // Cette regex capture les emojis, les espaces et les caractères individuels
+    // This regex captures emojis, spaces and individual characters
     return Array.from(text.matchAll(/\p{Extended_Pictographic}|\s+|[^\s\p{Extended_Pictographic}]/gu))
         .map(match => match[0]);
 };
 
-// Composant pour l'animation lettre par lettre
+// Component for letter-by-letter animation
 const AnimatedLetters = ({ text }: { text: string }) => {
     const characters = splitTextPreservingEmojis(text);
     
@@ -103,7 +103,7 @@ export const FunLoadingMessages: React.FC<IFunLoadingMessagesProps> = ({
             spacing === 'large' && 'min-h-[70vh]',
             className
         )}>
-            {/* Spinner autour du texte Loading */}
+            {/* Spinner around Loading text */}
             <div className="relative w-32 h-32 flex items-center justify-center mb-8">
                 <Loader2 className="absolute w-full h-full animate-spin text-primary opacity-20" />
                 <span className="text-base font-medium text-foreground/90">
@@ -111,7 +111,7 @@ export const FunLoadingMessages: React.FC<IFunLoadingMessagesProps> = ({
                 </span>
             </div>
             
-            {/* Message avec effet shimmer */}
+            {/* Message with shimmer effect */}
             <div className="relative w-full max-w-md px-6 py-4 rounded-lg bg-background/80 backdrop-blur-sm border border-border shadow-lg">
                 <AnimatePresence mode="wait">
                     <motion.div

@@ -24,6 +24,7 @@ import { calculateProviderAggregatedStats, aggregateProviderEpochDataByWallet } 
 import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
+import { GlobalStakedChart } from "@/components/charts/GlobalStakedChart";
 import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
 import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
@@ -159,7 +160,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
     );
   }
 
-  // Maintenant on peut faire le return conditionnel pour les données manquantes
+  // Now we can do the conditional return for missing data
   if (!providerIdentity) {
     return (
       <div className={cn("flex items-center justify-center h-full text-muted-foreground p-4 text-center", className)}>
@@ -170,7 +171,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
 
   // Le reste du JSX reste inchangé
   return (
-    <div className={cn("flex flex-col space-y-6 p-4 md:p-6 h-full", className)}>
+    <div className={cn("flex flex-col space-y-6 p-4 md:p-6", className)}>
       <div className="flex items-center space-x-4 flex-shrink-0">
         {providerIdentity.identityInfo?.avatar && (
           <Image
@@ -244,7 +245,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
         )}
       </Card>
 
-      <Card className="bg-card/80 border-border/50 flex flex-col flex-grow overflow-hidden">
+      <Card className="bg-card/80 border-border/50 flex flex-col flex-grow">
         <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle>
@@ -276,12 +277,8 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               className="h-[450px] min-h-[450px]"
             />
           ) : (
-            <ProviderEpochChart
-              epochWalletData={providerStakingWalletData}
-              providerName={providerIdentity.identityInfo?.name || providerIdentity.provider}
-              chartType="line"
-              displayMode="daily"
-              viewMode="staked"
+            <GlobalStakedChart
+              stakingData={providerStakingWalletData}
               className="h-[450px] min-h-[450px]"
             />
           )}

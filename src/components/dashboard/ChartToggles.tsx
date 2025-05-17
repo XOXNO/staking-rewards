@@ -25,6 +25,13 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
     onDisplayModeChange,
     onChartTypeChange,
 }) => {
+    // Handler pour le changement de displayMode avec log
+    const handleDisplayModeChange = (value: DisplayMode) => {
+        if (value && value !== displayMode) {
+            onDisplayModeChange(value);
+        }
+    };
+
     return (
         <div className="flex gap-2">
             {/* View Mode Toggle */}
@@ -67,7 +74,7 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
                         type="single"
                         variant="outline"
                         value={displayMode}
-                        onValueChange={(value: DisplayMode) => { if (value) onDisplayModeChange(value); }}
+                        onValueChange={handleDisplayModeChange}
                         size="sm"
                         aria-label="Display Mode"
                     >

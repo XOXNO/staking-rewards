@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@/styles/responsive.css";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 import { StakingProvider } from "@/lib/context/StakingContext";
 import { Toaster } from "@/components/ui/toaster";
