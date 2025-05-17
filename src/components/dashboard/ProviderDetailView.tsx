@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * @file ProviderDetailView.tsx
  * @description Displays detailed stats and epoch chart for a selected provider.
@@ -101,7 +104,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
       const owner = fullRewardsData[addr]?.providersWithIdentityInfo?.find(p => p.provider === selectedProviderAddress)?.owner;
       if (owner) providerOwners[selectedProviderAddress] = owner;
     });
-    // @ts-ignore
+
     return require('@/lib/utils/calculationUtils').aggregateStakingDataByWallet(allProvidersData, providerOwners, selectedAddresses);
   }, [fullRewardsData, selectedAddresses, selectedProviderAddress]);
 

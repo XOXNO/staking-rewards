@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file cacheUtils.ts
  * @description Utilities for caching expensive calculations
@@ -72,7 +74,7 @@ function cleanupLocalStorage(storageKeyPrefix: string): void {
         continue;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Silent error
   }
 }

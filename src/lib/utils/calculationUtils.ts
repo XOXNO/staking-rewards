@@ -307,7 +307,7 @@ export function aggregateStakingDataByWallet(
 
   const epochWalletMap: Map<number, Record<string, number>> = new Map();
 
-  Object.entries(allProvidersData).forEach(([providerAddress, epochDataArray]) => {
+  Object.entries(allProvidersData).forEach(([, epochDataArray]) => {
     epochDataArray.forEach(epochData => {
       const wallet = epochData.walletAddress;
       if (selectedAddresses.includes(wallet)) {
