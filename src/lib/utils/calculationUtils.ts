@@ -360,12 +360,15 @@ export function aggregateStakingDataByWallet(
 export function aggregateGlobalEpochData(
   providersData: Record<string, any[]>,
   selectedAddresses: string[],
+  providerOwners: Record<string, string> = {},
   currencyMode: 'egld' | 'usd' = 'egld'
 ): Array<{ epoch: number; [wallet: string]: number }> {
   const epochMap = new Map<number, { [wallet: string]: number }>();
 
   // Process all providers data
-  Object.values(providersData).forEach(providerData => {
+  Object.entries(providersData).forEach(([providerAddress, providerData]) => {
+    const providerOwner = providerOwners[providerAddress];
+
     providerData.forEach(epochData => {
       const { epoch, walletAddress } = epochData;
       
@@ -383,12 +386,25 @@ export function aggregateGlobalEpochData(
         epochEntry[walletAddress] = 0;
       }
 
-      // Add rewards based on currency mode
-      const rewardValue = currencyMode === 'usd' 
-        ? epochData.epochUserRewardsUsd 
-        : epochData.epochUserRewards;
+      // Check if this wallet is the owner of the provider
+      const isOwner = providerOwner && walletAddress === providerOwner;
 
-      epochEntry[walletAddress] += rewardValue || 0;
+      // Add rewards based on currency mode
+      if (currencyMode === 'usd') {
+        // User rewards
+        epochEntry[walletAddress] += epochData.epochUserRewardsUsd || 0;
+        // Add owner rewards if this wallet is the owner
+        if (isOwner) {
+          epochEntry[walletAddress] += epochData.epochOwnerRewardsUsd || 0;
+        }
+      } else {
+        // User rewards
+        epochEntry[walletAddress] += epochData.epochUserRewards || 0;
+        // Add owner rewards if this wallet is the owner
+        if (isOwner) {
+          epochEntry[walletAddress] += epochData.ownerRewards || 0;
+        }
+      }
     });
   });
 
