@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 import { useAddressResolver } from '@/lib/hooks/useAddressResolver';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CHART_COLORS } from '@/lib/constants/chartColors';
 
 interface IProviderSidebarProps {
     providers: IProviderWithIdentity[] | undefined;

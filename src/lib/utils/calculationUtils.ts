@@ -289,7 +289,7 @@ export function aggregateProviderEpochDataByWallet(
     }
 
     // Check if this wallet is the owner of the provider
-    const isOwner = walletAddress === providerOwner;
+    const isOwner = walletAddress === providerOwners[selectedProviderAddress];
 
     // Add rewards based on currency mode
     if (currencyMode === 'usd') {
