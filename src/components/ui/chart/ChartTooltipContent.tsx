@@ -112,6 +112,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
   };
 
   // Get currency symbol based on mode
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const currencySymbol = currencyMode === 'usd' ? '$' : 'EGLD';
 
   return (

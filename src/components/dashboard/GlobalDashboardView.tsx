@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @file GlobalDashboardView.tsx
  * @description Displays aggregated statistics and charts for all providers.

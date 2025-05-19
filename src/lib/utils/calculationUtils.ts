@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file calculationUtils.ts
  * @description Utility functions for calculations, e.g., epoch averages.
@@ -268,7 +269,6 @@ export function aggregateProviderEpochDataByWallet(
 
   // Get the provider's data and owner
   const providerData = allProvidersData[selectedProviderAddress] || [];
-  const providerOwner = providerOwners[selectedProviderAddress];
 
   // Group rewards by epoch
   providerData.forEach(epochData => {
