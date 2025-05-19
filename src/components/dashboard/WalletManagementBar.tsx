@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils/cn";
 import { ColorDotPicker } from './ColorDotPicker';
 import { useToast } from "@/hooks/use-toast";
 import { useAddressResolver } from "@/lib/hooks/useAddressResolver";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface IWalletManagementBarProps {
   className?: string;
@@ -31,15 +32,16 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
   const [newAddress, setNewAddress] = useState("");
   const { toast } = useToast();
   const { resolveAddress, isResolving } = useAddressResolver();
+  const isMobile = useIsMobile();
 
-  // Handler pour ajouter une nouvelle adresse
+  // Handler for adding a new address
   const handleAddAddress = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newAddress.trim()) return;
 
     try {
-      // Résoudre l'adresse ou le herotag
+      // Resolve the address or herotag
       const result = await resolveAddress(newAddress);
       
       if (result.error || !result.resolvedAddress) {
@@ -53,7 +55,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
       
       const resolvedAddress = result.resolvedAddress;
       
-      // Vérifie si l'adresse existe déjà
+      // Check if the address already exists
       if (addedAddresses.includes(resolvedAddress)) {
         toast({
           variant: "default",
@@ -64,11 +66,11 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
         return;
       }
 
-      // Ajoute l'adresse
+      // Add the address
       await addAddress(resolvedAddress);
       setNewAddress("");
       
-      // Notification de succès
+      // Success notification
       toast({
         variant: "default",
         title: "Address added successfully",
@@ -77,7 +79,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
       });
 
     } catch (error) {
-      // Notification d'erreur
+      // Error notification
       toast({
         variant: "destructive",
         title: "Error adding address",
@@ -86,6 +88,11 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
     }
   }, [newAddress, resolveAddress, addedAddresses, addAddress, toast]);
 
+  // Return null if on mobile
+  if (isMobile) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
@@ -93,7 +100,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
         className
       )}
     >
-      {/* Formulaire d'ajout d'adresse */}
+      {/* Form for adding an address */}
       <form onSubmit={handleAddAddress} className="flex items-center gap-2 min-w-[300px]">
         <Input
           type="text"
@@ -114,7 +121,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
       </form>
 
       {addedAddresses.length > 0 && (
-        <div className="hidden md:flex items-center gap-4 flex-grow">
+        <div className="flex items-center gap-4 flex-grow">
           <span className="text-sm font-semibold mr-2">Wallets:</span>
           <div className="flex items-center gap-2 flex-wrap flex-grow">
             {addedAddresses.map((address) => (
@@ -122,13 +129,13 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
                 key={address}
                 className="flex items-center gap-1.5 border rounded-md px-2 py-1 bg-muted/50 text-xs"
               >
-                {/* Dot coloré + picker */}
+                {/* Color dot + picker */}
                 <ColorDotPicker
                   color={walletColorMap[address]}
                   onChange={(color) => setWalletColor(address, color)}
                   size={16}
                 />
-                {/* Checkbox colorée */}
+                {/* Colored checkbox */}
                 <Checkbox
                   id={`mgmt-wallet-${address}`}
                   checked={selectedAddresses.includes(address)}
@@ -140,7 +147,7 @@ export const WalletManagementBar: React.FC<IWalletManagementBarProps> = ({
                     borderColor: walletColorMap[address],
                   }}
                 />
-                {/* Texte coloré */}
+                {/* Colored text */}
                 <Label
                   htmlFor={`mgmt-wallet-${address}`}
                   className="font-mono cursor-pointer truncate"

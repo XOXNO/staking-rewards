@@ -25,6 +25,7 @@ import { GlobalDashboardView } from '@/components/dashboard/GlobalDashboardView'
 import { WalletManagementBar } from '@/components/dashboard/WalletManagementBar';
 import { shortenAddress } from '@/lib/utils/formatters';
 import { ExportButton } from '@/components/dashboard/ExportButton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sheet,
   SheetContent,
@@ -66,6 +67,7 @@ export default function HomePage(): React.ReactElement {
     selectedProviderAddress,
   } = state;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleSelectProvider = useCallback(
     (providerAddress: string | null) => {
@@ -419,7 +421,7 @@ export default function HomePage(): React.ReactElement {
                   <span className="sr-only">Select Provider</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-80 flex flex-col p-0">
+              <SheetContent side="left" className={`${isMobile ? 'w-full' : 'w-80'} flex flex-col p-0`}>
                 <SheetHeader className="p-4 border-b border-border/50 flex-shrink-0">
                   <SheetTitle className="text-lg font-semibold tracking-tight">
                     Providers

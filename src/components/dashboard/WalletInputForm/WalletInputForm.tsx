@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useStaking } from '@/lib/context/StakingContext';
 import { cn } from '@/lib/utils/cn';
 import { useAddressResolver } from '@/lib/hooks/useAddressResolver';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface IAddWalletFormProps {
     className?: string;
@@ -41,6 +42,7 @@ export const AddWalletForm: React.FC<IAddWalletFormProps> = ({ className, onSucc
     const [validationError, setValidationError] = useState<string | null>(null);
     const { addAddress, state } = useStaking(); // Use addAddress from context
     const { isLoading } = state;
+    const isMobile = useIsMobile();
     
     // Utilise le hook de résolution d'adresse
     const { resolveAddress, isResolving, error, clearError } = useAddressResolver();
@@ -87,17 +89,26 @@ export const AddWalletForm: React.FC<IAddWalletFormProps> = ({ className, onSucc
     return (
         <form 
             onSubmit={handleSubmit} 
-            className={cn('flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full max-w-lg', className)}
+            className={cn(
+                'flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full max-w-lg',
+                isMobile && 'p-4 pb-8 pt-6',
+                className
+            )}
         >
             <div className="w-full flex flex-col">
-                <div className="flex flex-grow group">
+                <div className={cn(
+                    "flex flex-grow group",
+                    isMobile && "flex-col"
+                )}>
                     <Input
                         type="text"
                         value={address}
                         onChange={handleAddressChange}
                         placeholder="Enter MultiversX address (erd1...) or herotag..."
                         className={cn(
-                            "flex-grow rounded-r-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring h-12 text-base placeholder:truncate placeholder:overflow-ellipsis placeholder:whitespace-nowrap group-hover:border-ring group-hover:bg-muted/40 group-focus-within:border-ring group-focus-within:bg-muted/40 transition-colors text-foreground bg-background dark:bg-input/30 border border-input",
+                            "flex-grow focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring h-12 text-base placeholder:truncate placeholder:overflow-ellipsis placeholder:whitespace-nowrap group-hover:border-ring group-hover:bg-muted/40 group-focus-within:border-ring group-focus-within:bg-muted/40 transition-colors text-foreground bg-background dark:bg-input/30 border border-input",
+                            isMobile ? "rounded-t-md rounded-b-none mb-0" : "rounded-r-none",
+                            isMobile && "h-16 text-lg px-4 py-5",
                             validationError ? 'border-destructive focus-visible:ring-destructive' : ''
                         )}
                         aria-label="Wallet Address Input"
@@ -105,10 +116,10 @@ export const AddWalletForm: React.FC<IAddWalletFormProps> = ({ className, onSucc
                     />
                     <Button 
                         type="submit" 
-                        className="rounded-l-none min-w-[100px] h-12 text-base border border-input transition-colors
-                            bg-black text-white dark:bg-white dark:text-black
-                            group-hover:border-ring group-focus:border-ring
-                            shadow-sm"
+                        className={cn(
+                            "min-w-[100px] h-12 text-base border border-input transition-colors bg-black text-white dark:bg-white dark:text-black group-hover:border-ring group-focus:border-ring shadow-sm",
+                            isMobile ? "rounded-b-md rounded-t-none w-full h-16 text-lg font-medium mt-0" : "rounded-l-none"
+                        )}
                         disabled={!address || !!validationError || isSubmitting}
                     >
                         {isResolving ? 'Resolving...' : isCurrentAddressLoading ? 'Adding...' : 'Add Wallet'}
