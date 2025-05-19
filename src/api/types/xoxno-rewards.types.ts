@@ -11,6 +11,8 @@ export interface IEpochRewardData {
   epoch: number;
   totalStaked: number; // Assuming this is a number based on context, could be string if very large
   epochUserRewards: number;
+  epochUserRewardsUsd: number;
+  epochOwnerRewardsUsd: number;
   ownerRewards: number;
 }
 

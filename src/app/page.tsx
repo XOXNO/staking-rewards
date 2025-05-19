@@ -264,6 +264,9 @@ export default function HomePage(): React.ReactElement {
                 epochWalletData={epochWalletData}
                 stakingData={stakingData}
                 walletColorMap={walletColorMap}
+                fullRewardsData={rewardsData}
+                className="flex-grow"
+                isLoading={isAnyLoading}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -283,6 +286,8 @@ export default function HomePage(): React.ReactElement {
                 (epoch, addr) => rewardsData[addr]?.currentEpoch ?? epoch,
                 0
               )}
+              className="flex-grow"
+              isLoading={isAnyLoading}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">

@@ -68,7 +68,7 @@ export const ExportButton: React.FC<IExportButtonProps> = ({ className }) => {
   };
 
   /**
-   * Creates an Excel file with two sheets: rewards per epoch and summary by wallet/provider
+   * Creates an Excel file with rewards data in both EGLD and USD
    */
   const createExcelExport = (
     allProvidersData: Record<string, EpochRewardDataWithWallet[]>,
@@ -82,136 +82,116 @@ export const ExportButton: React.FC<IExportButtonProps> = ({ className }) => {
     
     // Create a new workbook
     const workbook = XLSX.utils.book_new();
-    
-    // ------ SHEET 1: REWARDS PER EPOCH ------
-    // Map to aggregate detailed data by epoch/wallet
-    type RecordWithEpoch = Record<string, any> & { epoch: number, wallet: string };
-    const epochWalletMap = new Map<string, RecordWithEpoch>();
-    
-    // Function to create a unique key for each epoch/wallet combination
-    const getKey = (epoch: number, wallet: string) => `${epoch}-${wallet}`;
-    
-    // Group data by epoch/wallet and provider
-    providersList.forEach(provider => {
-      const data = allProvidersData[provider] || [];
-      data.forEach(item => {
-        const key = getKey(item.epoch, item.walletAddress);
-        
-        if (!epochWalletMap.has(key)) {
-          epochWalletMap.set(key, {
-            epoch: item.epoch,
-            wallet: item.walletAddress,
-          });
-        }
-        
-        const record = epochWalletMap.get(key)!;
-        // Add the total for this provider (user rewards + owner if applicable)
-        const isOwner = item.walletAddress === allProviderOwners[provider];
-        const totalReward = item.epochUserRewards + (isOwner ? item.ownerRewards : 0);
-        record[provider] = (record[provider] || 0) + totalReward;
-      });
-    });
-    
-    // Create header for the detailed section with provider addresses shortened
-    const detailedHeaders = ["Epoch", "Wallet", ...providersList.map(p => shortenAddress(p))];
-    
-    // Convert detailed data to Excel rows
-    const detailedRows: (string | number)[][] = [];
-    
-    // Add header row
-    detailedRows.push(detailedHeaders);
-    
-    // Get all epoch/wallet data
-    const epochData = Array.from(epochWalletMap.values());
-    
-    // Sort by epoch and wallet
-    epochData.sort((a, b) => {
-      // Sort first by epoch
-      if (a.epoch !== b.epoch) return a.epoch - b.epoch;
+
+    // Function to create sheets for a specific currency mode
+    const createCurrencySheets = (currencyMode: 'egld' | 'usd') => {
+      // ------ SHEET: REWARDS PER EPOCH ------
+      type RecordWithEpoch = Record<string, any> & { epoch: number, wallet: string };
+      const epochWalletMap = new Map<string, RecordWithEpoch>();
       
-      // Then by wallet
-      return a.wallet.localeCompare(b.wallet);
-    });
-    
-    // Add data rows
-    epochData.forEach(record => {
-      const row: (string | number)[] = [
-        record.epoch,
-        record.wallet
-      ];
+      const getKey = (epoch: number, wallet: string) => `${epoch}-${wallet}`;
       
-      // Add rewards for each provider
+      // Group data by epoch/wallet and provider
       providersList.forEach(provider => {
-        row.push(record[provider] || 0);
-      });
-      
-      detailedRows.push(row);
-    });
-    
-    // Create the worksheet for rewards per epoch
-    const rewardsSheet = XLSX.utils.aoa_to_sheet(detailedRows);
-    
-    // Add sheet to workbook
-    XLSX.utils.book_append_sheet(workbook, rewardsSheet, "Reward per epoch");
-    
-    // ------ SHEET 2: SUMMARY ------
-    // Map to store totals by wallet and provider
-    const walletProviderTotals: Record<string, Record<string, number>> = {};
-    
-    // Initialize the structure
-    wallets.forEach(wallet => {
-      walletProviderTotals[wallet] = {};
-      providersList.forEach(provider => {
-        walletProviderTotals[wallet][provider] = 0;
-      });
-    });
-    
-    // Calculate totals
-    providersList.forEach(provider => {
-      const data = allProvidersData[provider] || [];
-      data.forEach(item => {
-        if (wallets.includes(item.walletAddress)) {
+        const data = allProvidersData[provider] || [];
+        data.forEach(item => {
+          const key = getKey(item.epoch, item.walletAddress);
+          
+          if (!epochWalletMap.has(key)) {
+            epochWalletMap.set(key, {
+              epoch: item.epoch,
+              wallet: item.walletAddress,
+            });
+          }
+          
+          const record = epochWalletMap.get(key)!;
+          // Add the total for this provider (user rewards + owner if applicable)
           const isOwner = item.walletAddress === allProviderOwners[provider];
-          const totalReward = item.epochUserRewards + (isOwner ? item.ownerRewards : 0);
-          walletProviderTotals[item.walletAddress][provider] += totalReward;
-        }
+          const userReward = currencyMode === 'usd' ? (item.epochUserRewardsUsd || 0) : item.epochUserRewards;
+          const ownerReward = currencyMode === 'usd' ? (item.epochOwnerRewardsUsd || 0) : item.ownerRewards;
+          const totalReward = userReward + (isOwner ? ownerReward : 0);
+          record[provider] = (record[provider] || 0) + totalReward;
+        });
       });
-    });
-    
-    // Create header for the summary
-    const summaryHeaders = ["Wallet", ...providersList.map(p => shortenAddress(p)), "Total"];
-    
-    // Convert summary data to Excel rows
-    const summaryRows: (string | number)[][] = [];
-    
-    // Add header row
-    summaryRows.push(summaryHeaders);
-    
-    // Add data rows
-    wallets.forEach(wallet => {
-      const row: (string | number)[] = [wallet];
       
-      // Calculate total for this wallet
-      let walletTotal = 0;
+      // Create headers
+      const detailedHeaders = ["Epoch", "Wallet", ...providersList.map(p => shortenAddress(p))];
+      const detailedRows: (string | number)[][] = [detailedHeaders];
       
-      // Add rewards for each provider
+      // Sort and add data rows
+      const epochData = Array.from(epochWalletMap.values())
+        .sort((a, b) => {
+          if (a.epoch !== b.epoch) return a.epoch - b.epoch;
+          return a.wallet.localeCompare(b.wallet);
+        });
+      
+      epochData.forEach(record => {
+        const row: (string | number)[] = [
+          record.epoch,
+          record.wallet,
+          ...providersList.map(provider => record[provider] || 0)
+        ];
+        detailedRows.push(row);
+      });
+      
+      // Create and add the rewards per epoch sheet
+      const rewardsSheet = XLSX.utils.aoa_to_sheet(detailedRows);
+      XLSX.utils.book_append_sheet(
+        workbook, 
+        rewardsSheet, 
+        `Rewards per epoch (${currencyMode.toUpperCase()})`
+      );
+      
+      // ------ SHEET: SUMMARY ------
+      const walletProviderTotals: Record<string, Record<string, number>> = {};
+      
+      // Initialize totals structure
+      wallets.forEach(wallet => {
+        walletProviderTotals[wallet] = {};
+        providersList.forEach(provider => {
+          walletProviderTotals[wallet][provider] = 0;
+        });
+      });
+      
+      // Calculate totals
       providersList.forEach(provider => {
-        const value = walletProviderTotals[wallet][provider];
-        row.push(value);
-        walletTotal += value;
+        const data = allProvidersData[provider] || [];
+        data.forEach(item => {
+          if (wallets.includes(item.walletAddress)) {
+            const isOwner = item.walletAddress === allProviderOwners[provider];
+            const userReward = currencyMode === 'usd' ? (item.epochUserRewardsUsd || 0) : item.epochUserRewards;
+            const ownerReward = currencyMode === 'usd' ? (item.epochOwnerRewardsUsd || 0) : item.ownerRewards;
+            const totalReward = userReward + (isOwner ? ownerReward : 0);
+            walletProviderTotals[item.walletAddress][provider] += totalReward;
+          }
+        });
       });
       
-      // Add the total
-      row.push(walletTotal);
+      // Create summary rows
+      const summaryHeaders = ["Wallet", ...providersList.map(p => shortenAddress(p)), "Total"];
+      const summaryRows: (string | number)[][] = [summaryHeaders];
       
-      summaryRows.push(row);
-    });
-    
-    // Create the worksheet for summary
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-    
-    // Add sheet to workbook
-    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+      wallets.forEach(wallet => {
+        const row: (string | number)[] = [
+          wallet,
+          ...providersList.map(provider => walletProviderTotals[wallet][provider]),
+          Object.values(walletProviderTotals[wallet]).reduce((a, b) => a + b, 0)
+        ];
+        summaryRows.push(row);
+      });
+      
+      // Create and add the summary sheet
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(
+        workbook, 
+        summarySheet, 
+        `Summary (${currencyMode.toUpperCase()})`
+      );
+    };
+
+    // Create sheets for both EGLD and USD
+    createCurrencySheets('egld');
+    createCurrencySheets('usd');
     
     // Generate Excel file and trigger download
     XLSX.writeFile(workbook, `staking-rewards-export-${formattedDate}.xlsx`);

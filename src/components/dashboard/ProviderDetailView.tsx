@@ -28,7 +28,7 @@ import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { GlobalStakedChart } from "@/components/charts/GlobalStakedChart";
-import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
+import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode } from './ChartToggles';
 import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletDistribution } from './WalletDistribution';
@@ -64,6 +64,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
   const [chartType, setChartType] = useState<ChartType>("bar");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("daily");
   const [viewMode, setViewMode] = useState<ViewMode>('rewards');
+  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('egld');
 
   // 2. Trouver le providerIdentity - maintenant dans un useMemo
   const providerIdentity = useMemo(() => {
@@ -89,8 +90,8 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
       const owner = fullRewardsData[addr]?.providersWithIdentityInfo?.find(p => p.provider === selectedProviderAddress)?.owner;
       if (owner) providerOwners[selectedProviderAddress] = owner;
     });
-    return aggregateProviderEpochDataByWallet(allProvidersData, providerOwners, selectedAddresses, selectedProviderAddress);
-  }, [fullRewardsData, selectedAddresses, selectedProviderAddress]);
+    return aggregateProviderEpochDataByWallet(allProvidersData, providerOwners, selectedAddresses, selectedProviderAddress, currencyMode);
+  }, [fullRewardsData, selectedAddresses, selectedProviderAddress, currencyMode]);
 
   const providerStakingWalletData = useMemo(() => {
     const allProvidersData: Record<string, any[]> = {};
@@ -241,9 +242,11 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
             viewMode={viewMode}
             displayMode={displayMode}
             chartType={chartType}
+            currencyMode={currencyMode}
             onViewModeChange={setViewMode}
             onDisplayModeChange={setDisplayMode}
             onChartTypeChange={setChartType}
+            onCurrencyModeChange={setCurrencyMode}
           />
         </CardHeader>
         <CardContent className="flex-grow p-2">
@@ -253,6 +256,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               providerName={providerIdentity.identityInfo?.name || providerIdentity.provider}
               chartType={chartType}
               displayMode={displayMode}
+              currencyMode={currencyMode}
               viewMode="rewards"
               className="h-[450px] min-h-[450px]"
             />
