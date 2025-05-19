@@ -1,29 +1,34 @@
 import React from 'react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon, CoinsIcon, WalletIcon } from "lucide-react";
+import { BarChartIcon, LineChartIcon, TrendingUpIcon, CalendarIcon, CoinsIcon, WalletIcon, DollarSignIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 // Types
 export type ChartType = 'bar' | 'line';
 export type DisplayMode = 'daily' | 'cumulative';
 export type ViewMode = 'rewards' | 'staked';
+export type CurrencyMode = 'egld' | 'usd';
 
 interface ChartTogglesProps {
     viewMode: ViewMode;
     displayMode: DisplayMode;
     chartType: ChartType;
+    currencyMode: CurrencyMode;
     onViewModeChange: (value: ViewMode) => void;
     onDisplayModeChange: (value: DisplayMode) => void;
     onChartTypeChange: (value: ChartType) => void;
+    onCurrencyModeChange: (value: CurrencyMode) => void;
 }
 
 export const ChartToggles: React.FC<ChartTogglesProps> = ({
     viewMode,
     displayMode,
     chartType,
+    currencyMode,
     onViewModeChange,
     onDisplayModeChange,
     onChartTypeChange,
+    onCurrencyModeChange,
 }) => {
     // Handler pour le changement de displayMode avec log
     const handleDisplayModeChange = (value: DisplayMode) => {
@@ -101,6 +106,40 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
                             <TooltipContent side="top">Show cumulative values</TooltipContent>
                         </Tooltip>
                     </ToggleGroup>
+
+                    {/* Currency Mode Toggle */}
+                    <ToggleGroup
+                        type="single"
+                        variant="outline"
+                        value={currencyMode}
+                        onValueChange={(value: CurrencyMode) => { if (value) onCurrencyModeChange(value); }}
+                        size="sm"
+                        aria-label="Currency Mode"
+                    >
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <ToggleGroupItem 
+                                    value="egld" 
+                                    aria-label="Show in EGLD"
+                                >
+                                    <CoinsIcon className="h-4 w-4" />
+                                </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Show values in EGLD</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <ToggleGroupItem 
+                                    value="usd" 
+                                    aria-label="Show in USD"
+                                >
+                                    <DollarSignIcon className="h-4 w-4" />
+                                </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Show values in USD</TooltipContent>
+                        </Tooltip>
+                    </ToggleGroup>
+
                     <ToggleGroup
                         type="single"
                         variant="outline"

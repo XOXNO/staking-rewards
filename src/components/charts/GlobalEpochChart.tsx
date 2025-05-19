@@ -30,13 +30,14 @@ import {
   precalculateEpochSums,
   calculateYDomain,
 } from "@/lib/utils/chartUtils";
-import { DisplayMode } from "@/components/dashboard/ChartToggles";
+import { DisplayMode, CurrencyMode } from "@/components/dashboard/ChartToggles";
 
 interface IGlobalEpochChartProps {
   aggregatedEpochData: IAggregatedEpochData[] | undefined;
   epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
+  currencyMode: CurrencyMode;
   className?: string;
 }
 
@@ -89,6 +90,7 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
   epochWalletData,
   chartType,
   displayMode,
+  currencyMode,
   className,
 }) => {
   // Add a state to track displayMode changes
@@ -163,9 +165,11 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
       return value.toLocaleString(undefined, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
+        style: currencyMode === 'usd' ? 'currency' : 'decimal',
+        currency: currencyMode === 'usd' ? 'USD' : undefined,
       });
     },
-    [yDomain]
+    [yDomain, currencyMode]
   );
 
   // Memoize common styles
@@ -279,6 +283,7 @@ export const GlobalEpochChart: React.FC<IGlobalEpochChartProps> = ({
                     walletColorMap={walletColorMap}
                     displayMode={displayMode}
                     viewMode="rewards"
+                    currencyMode={currencyMode}
                   />
                 )}
               />

@@ -32,7 +32,7 @@ import {
   calculateYDomain,
 } from "@/lib/utils/chartUtils";
 import { useStaking } from "@/lib/context/StakingContext";
-import { DisplayMode } from "@/components/dashboard/ChartToggles";
+import { DisplayMode, CurrencyMode } from "@/components/dashboard/ChartToggles";
 
 /**
  * Format of a data entry for the epoch chart by wallet.
@@ -49,6 +49,7 @@ interface IProviderEpochChartProps {
   providerName: string;
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
+  currencyMode: CurrencyMode;
   className?: string;
   viewMode?: "rewards" | "staked";
 }
@@ -104,10 +105,11 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   providerName,
   chartType,
   displayMode,
+  currencyMode,
   className,
   viewMode = "rewards",
 }) => {
-  // Add state to track displayMode changes
+  // Add a state to track displayMode changes
   const [prevDisplayMode, setPrevDisplayMode] =
     useState<DisplayMode>(displayMode);
 
@@ -116,7 +118,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
     if (prevDisplayMode !== displayMode) {
       setPrevDisplayMode(displayMode);
     }
-  }, [displayMode, prevDisplayMode, providerName]);
+  }, [displayMode, prevDisplayMode]);
 
   // Use context to get colors
   const {
@@ -131,35 +133,40 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   // Pre-calculate sums by epoch (direct calculation)
   const processedData = useMemo(() => {
     return precalculateEpochSums(epochWalletData, wallets);
-  }, [epochWalletData, wallets, providerName]);
+  }, [epochWalletData, wallets]);
 
-  // Calculate cumulative data (direct calculation)
+  // Calculate cumulative data
   const cumulativeData = useMemo(() => {
     return calculateCumulativeData(processedData, wallets);
-  }, [processedData, wallets, providerName]);
+  }, [processedData, wallets]);
 
-  // Pre-calculate totals for cumulative data (direct calculation)
+  // Pre-calculate totals for cumulative data
   const processedCumulativeData = useMemo(() => {
     return precalculateEpochSums(cumulativeData, wallets);
-  }, [cumulativeData, wallets, providerName]);
+  }, [cumulativeData, wallets]);
 
   // Select data based on display mode
   const displayData = useMemo(() => {
     return displayMode === "cumulative"
       ? processedCumulativeData
       : processedData;
-  }, [displayMode, processedCumulativeData, processedData, providerName]);
+  }, [displayMode, processedCumulativeData, processedData]);
 
-  // Calculate Y-axis limits (direct calculation)
+  // Reduce the number of points for display
+  const optimizedDisplayData = useMemo(() => {
+    return reduceDataPoints(displayData);
+  }, [displayData]);
+
+  // Calculate Y-axis limits
   const yDomain = useMemo(() => {
-    return calculateYDomain(displayData, displayMode, wallets);
-  }, [displayData, displayMode, wallets, providerName]);
+    return calculateYDomain(optimizedDisplayData, displayMode, wallets);
+  }, [optimizedDisplayData, displayMode, wallets]);
 
   // Y-axis formatter
   const yTickFormatter = useCallback(
-    (value: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (value: any) => {
       if (typeof value !== "number") return "";
-      // Adjust decimal places based on maximum value
       const maxValue = yDomain[1];
       const decimals =
         maxValue < 0.1
@@ -174,20 +181,17 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
       return value.toLocaleString(undefined, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
+        style: currencyMode === 'usd' ? 'currency' : 'decimal',
+        currency: currencyMode === 'usd' ? 'USD' : undefined,
       });
     },
-    [yDomain]
+    [yDomain, currencyMode]
   );
 
   // Choose parent component
   const ChartComponent = chartType === "bar" ? BarChart : AreaChart;
 
-  // Reduce the number of points for display
-  const optimizedDisplayData = useMemo(() => {
-    return reduceDataPoints(displayData);
-  }, [displayData]);
-
-  // Memoize common styles to avoid recalculations
+  // Memoize common styles
   const chartStyles = useMemo(
     () => ({
       cartesianGrid: {
@@ -200,7 +204,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
         axisLine: false,
         tickMargin: 8,
         fontSize: 10,
-        minTickGap: 60,
+        minTickGap: 80,
       },
       yAxis: {
         tickLine: false,
@@ -213,23 +217,36 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
     []
   );
 
-  // Memoize chart components for each wallet
+  // Memoize chart components
   const chartElements = useMemo(() => {
     const elements = wallets.map((wallet) => {
       const color = walletColorMap[wallet];
       if (chartType === "bar") {
         return (
-          <Bar key={wallet} dataKey={wallet} fill={color} stackId="stack" />
+          <Bar
+            key={wallet}
+            dataKey={wallet}
+            stackId="stack"
+            fill={color}
+            name={wallet}
+            radius={2}
+            isAnimationActive={false}
+          />
         );
       } else {
         return (
           <Area
             key={wallet}
             dataKey={wallet}
-            stroke={color}
-            fill={color}
-            fillOpacity={0.5}
             stackId="stack"
+            type="natural"
+            fill={color}
+            stroke={color}
+            fillOpacity={0.5}
+            strokeWidth={2}
+            dot={false}
+            name={wallet}
+            isAnimationActive={false}
           />
         );
       }
@@ -284,6 +301,7 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
                     walletColorMap={walletColorMap}
                     displayMode={displayMode}
                     viewMode={viewMode}
+                    currencyMode={currencyMode}
                   />
                 )}
               />

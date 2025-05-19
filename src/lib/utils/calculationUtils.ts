@@ -259,35 +259,49 @@ export function aggregateProviderEpochDataByWallet(
   allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
   providerOwners: Record<string, string>,
   selectedAddresses: string[],
-  provider: string
+  selectedProviderAddress: string,
+  currencyMode: 'egld' | 'usd' = 'egld'
 ): Array<{ epoch: number; [wallet: string]: number }> {
-  if (!allProvidersData || selectedAddresses.length === 0 || !provider) return [];
+  if (!allProvidersData) return [];
+  
+  const epochMap = new Map<number, { [wallet: string]: number }>();
 
-  const epochWalletMap: Map<number, Record<string, number>> = new Map();
-  const epochDataArray = allProvidersData[provider] || [];
-  const ownerAddress = providerOwners[provider];
+  // Get the provider's data and owner
+  const providerData = allProvidersData[selectedProviderAddress] || [];
+  const providerOwner = providerOwners[selectedProviderAddress];
 
-  epochDataArray.forEach(epochData => {
-    selectedAddresses.forEach(wallet => {
-      let reward = 0;
-      if (epochData.walletAddress === wallet) {
-        reward += epochData.epochUserRewards || 0;
-      }
-      if (wallet === ownerAddress) {
-        reward += epochData.ownerRewards || 0;
-      }
-      if (reward > 0) {
-        if (!epochWalletMap.has(epochData.epoch)) {
-          epochWalletMap.set(epochData.epoch, {});
-        }
-        const walletMap = epochWalletMap.get(epochData.epoch)!;
-        walletMap[wallet] = (walletMap[wallet] || 0) + reward;
-      }
-    });
+  // Group rewards by epoch
+  providerData.forEach(epochData => {
+    const { epoch, walletAddress } = epochData;
+    
+    // Skip if not in selected addresses
+    if (!selectedAddresses.includes(walletAddress)) return;
+
+    // Initialize epoch entry if needed
+    if (!epochMap.has(epoch)) {
+      epochMap.set(epoch, {});
+    }
+    const epochEntry = epochMap.get(epoch)!;
+
+    // Initialize wallet entry if needed
+    if (!epochEntry[walletAddress]) {
+      epochEntry[walletAddress] = 0;
+    }
+
+    // Add rewards based on currency mode
+    const rewardValue = currencyMode === 'usd' 
+      ? epochData.epochUserRewardsUsd 
+      : epochData.epochUserRewards;
+
+    epochEntry[walletAddress] += rewardValue || 0;
   });
 
-  return Array.from(epochWalletMap.entries())
-    .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+  // Convert map to array and sort by epoch
+  return Array.from(epochMap.entries())
+    .map(([epoch, walletRewards]) => ({
+      epoch,
+      ...walletRewards
+    }))
     .sort((a, b) => a.epoch - b.epoch);
 }
 
@@ -323,5 +337,52 @@ export function aggregateStakingDataByWallet(
 
   return Array.from(epochWalletMap.entries())
     .map(([epoch, walletMap]) => ({ epoch, ...walletMap }))
+    .sort((a, b) => a.epoch - b.epoch);
+}
+
+/**
+ * Aggregates global epoch data across all providers
+ */
+export function aggregateGlobalEpochData(
+  providersData: Record<string, any[]>,
+  selectedAddresses: string[],
+  currencyMode: 'egld' | 'usd' = 'egld'
+): Array<{ epoch: number; [wallet: string]: number }> {
+  const epochMap = new Map<number, { [wallet: string]: number }>();
+
+  // Process all providers data
+  Object.values(providersData).forEach(providerData => {
+    providerData.forEach(epochData => {
+      const { epoch, walletAddress } = epochData;
+      
+      // Skip if not in selected addresses
+      if (!selectedAddresses.includes(walletAddress)) return;
+
+      // Initialize epoch entry if needed
+      if (!epochMap.has(epoch)) {
+        epochMap.set(epoch, {});
+      }
+      const epochEntry = epochMap.get(epoch)!;
+
+      // Initialize wallet entry if needed
+      if (!epochEntry[walletAddress]) {
+        epochEntry[walletAddress] = 0;
+      }
+
+      // Add rewards based on currency mode
+      const rewardValue = currencyMode === 'usd' 
+        ? epochData.epochUserRewardsUsd 
+        : epochData.epochUserRewards;
+
+      epochEntry[walletAddress] += rewardValue || 0;
+    });
+  });
+
+  // Convert map to array and sort by epoch
+  return Array.from(epochMap.entries())
+    .map(([epoch, walletRewards]) => ({
+      epoch,
+      ...walletRewards
+    }))
     .sort((a, b) => a.epoch - b.epoch);
 }

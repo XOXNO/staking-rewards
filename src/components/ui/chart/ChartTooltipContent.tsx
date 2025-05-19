@@ -7,9 +7,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TooltipProps } from 'recharts';
 import { shortenAddress } from '@/lib/utils/formatters';
 import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
+import { CurrencyMode } from '@/components/dashboard/ChartToggles';
 
 interface IChartTooltipContentProps extends TooltipProps<ValueType, NameType> {
   walletColorMap: Record<string, string>;
+  currencyMode?: CurrencyMode;
 }
 
 export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
@@ -19,6 +21,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
   walletColorMap,
   coordinate,
   viewBox,
+  currencyMode = 'egld',
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({
@@ -108,6 +111,9 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
     return percentage.toFixed(1) + '%';
   };
 
+  // Get currency symbol based on mode
+  const currencySymbol = currencyMode === 'usd' ? '$' : 'EGLD';
+
   return (
     <div 
       ref={tooltipRef}
@@ -128,7 +134,9 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span>Total:</span>
-          <span className="font-bold text-foreground">{formatNumber(total)} EGLD</span>
+          <span className="font-bold text-foreground">
+            {currencyMode === 'usd' ? '$' : ''}{formatNumber(total)}{currencyMode === 'egld' ? ' EGLD' : ''}
+          </span>
         </div>
       </div>
       
@@ -147,7 +155,7 @@ export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
                 style={{ backgroundColor: color }}
               />
               <span className="font-medium" style={{ color }}>
-                {formatNumber(value)}
+                {currencyMode === 'usd' ? '$' : ''}{formatNumber(value)}{currencyMode === 'egld' ? ' EGLD' : ''}
               </span>
             </div>
             <div className="flex items-center gap-2">

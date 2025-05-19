@@ -12,18 +12,21 @@ import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assuming types exist
 import { GlobalEpochChart, GlobalStakedChart } from '@/components/charts';
-import { ChartToggles, type ChartType, type DisplayMode, type ViewMode } from './ChartToggles';
+import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode } from './ChartToggles';
 import { WalletPercentBar } from './WalletPercentBar';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 import { EpochStats } from '@/components/dashboard/EpochStats';
 import type { IEpochStats } from '@/components/dashboard/EpochStats';
+import { aggregateGlobalEpochData } from '@/lib/utils/calculationUtils';
+import type { IXoxnoUserRewardsResponse } from '@/api/types/xoxno-rewards.types';
 
 interface IGlobalDashboardViewProps {
     globalStats: IGlobalStats;
     aggregatedEpochData: IAggregatedEpochData[];
     epochWalletData: Array<{ epoch: number; [wallet: string]: number }>;
-    stakingData: Array<{ epoch: number; [wallet: string]: number }>;  // Staking data by epoch and by wallet
+    stakingData: Array<{ epoch: number; [wallet: string]: number }>;
     walletColorMap: Record<string, string>;
+    fullRewardsData: Record<string, IXoxnoUserRewardsResponse | null>;
     className?: string;
     isLoading?: boolean;
 }
@@ -34,15 +37,17 @@ interface IGlobalDashboardViewProps {
 export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     globalStats,
     aggregatedEpochData,
-    epochWalletData,
+    epochWalletData: initialEpochWalletData,
     stakingData,
     walletColorMap,
+    fullRewardsData,
     className,
     isLoading = false,
 }) => {
     const [chartType, setChartType] = useState<ChartType>('bar');
     const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
     const [viewMode, setViewMode] = useState<ViewMode>('rewards');
+    const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('egld');
 
     // Calculer les statistiques complètes pour les epochs
     const stats7 = useMemo<IEpochStats>(() => {
@@ -68,6 +73,26 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
             avg: globalStats.avg30 || values.reduce((a, b) => a + b, 0) / values.length
         };
     }, [aggregatedEpochData, globalStats.avg30]);
+
+    // Recalculer les données d'epoch en fonction du mode de devise
+    const processedEpochWalletData = useMemo(() => {
+        const allProvidersData: Record<string, Array<{ epoch: number; epochUserRewards: number; epochUserRewardsUsd: number; walletAddress: string }>> = {};
+        
+        // Collecter toutes les données des providers
+        Object.entries(fullRewardsData).forEach(([addr, data]) => {
+            if (data?.providersFullRewardsData) {
+                Object.entries(data.providersFullRewardsData).forEach(([provider, rewards]) => {
+                    if (!allProvidersData[provider]) allProvidersData[provider] = [];
+                    allProvidersData[provider].push(...rewards.map(epoch => ({ 
+                        ...epoch,
+                        walletAddress: addr 
+                    })));
+                });
+            }
+        });
+
+        return aggregateGlobalEpochData(allProvidersData, Object.keys(walletColorMap), currencyMode);
+    }, [fullRewardsData, walletColorMap, currencyMode]);
 
     if (isLoading) {
         return (
@@ -131,18 +156,21 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         viewMode={viewMode}
                         displayMode={displayMode}
                         chartType={chartType}
+                        currencyMode={currencyMode}
                         onViewModeChange={(value) => setViewMode(value)}
                         onDisplayModeChange={(value) => setDisplayMode(value)}
                         onChartTypeChange={(value) => setChartType(value)}
+                        onCurrencyModeChange={(value) => setCurrencyMode(value)}
                     />
                 </CardHeader>
                 <CardContent className="flex-grow p-2">
                     {viewMode === 'rewards' ? (
                         <GlobalEpochChart 
                             aggregatedEpochData={aggregatedEpochData}
-                            epochWalletData={epochWalletData}
+                            epochWalletData={processedEpochWalletData}
                             chartType={chartType}
                             displayMode={displayMode}
+                            currencyMode={currencyMode}
                             className="mt-4"
                         />
                     ) : (
