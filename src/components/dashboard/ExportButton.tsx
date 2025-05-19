@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file ExportButton.tsx
  * @description Component for exporting epoch rewards data to Excel format
