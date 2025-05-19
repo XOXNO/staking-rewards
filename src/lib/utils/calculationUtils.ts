@@ -288,12 +288,26 @@ export function aggregateProviderEpochDataByWallet(
       epochEntry[walletAddress] = 0;
     }
 
-    // Add rewards based on currency mode
-    const rewardValue = currencyMode === 'usd' 
-      ? epochData.epochUserRewardsUsd 
-      : epochData.epochUserRewards;
+    // Check if this wallet is the owner of the provider
+    const isOwner = walletAddress === providerOwner;
 
-    epochEntry[walletAddress] += rewardValue || 0;
+    // Add rewards based on currency mode
+    if (currencyMode === 'usd') {
+      // USD mode
+      epochEntry[walletAddress] += epochData.epochUserRewardsUsd || 0;
+      // Add owner rewards if this wallet is the owner
+      if (isOwner) {
+        epochEntry[walletAddress] += epochData.epochOwnerRewardsUsd || 0;
+      }
+
+    } else {
+      // EGLD mode - follow exactly the calculateEpochTotalReward pattern
+      epochEntry[walletAddress] += epochData.epochUserRewards || 0;
+      // Add owner rewards if this wallet is the owner
+      if (isOwner) {
+        epochEntry[walletAddress] += epochData.ownerRewards || 0;
+      }
+    }
   });
 
   // Convert map to array and sort by epoch
