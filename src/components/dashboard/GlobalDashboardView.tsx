@@ -77,6 +77,7 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     // Recalculer les données d'epoch en fonction du mode de devise
     const processedEpochWalletData = useMemo(() => {
         const allProvidersData: Record<string, Array<{ epoch: number; epochUserRewards: number; epochUserRewardsUsd: number; walletAddress: string }>> = {};
+        const providerOwners: Record<string, string> = {};
         
         // Collecter toutes les données des providers
         Object.entries(fullRewardsData).forEach(([addr, data]) => {
@@ -89,9 +90,18 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                     })));
                 });
             }
+            
+            // Extraire les informations de propriétaires
+            if (data?.providersWithIdentityInfo) {
+                data.providersWithIdentityInfo.forEach(p => {
+                    if (p.owner) {
+                        providerOwners[p.provider] = p.owner;
+                    }
+                });
+            }
         });
 
-        return aggregateGlobalEpochData(allProvidersData, Object.keys(walletColorMap), currencyMode);
+        return aggregateGlobalEpochData(allProvidersData, Object.keys(walletColorMap), providerOwners, currencyMode);
     }, [fullRewardsData, walletColorMap, currencyMode]);
 
     if (isLoading) {
