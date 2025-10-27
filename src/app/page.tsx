@@ -7,6 +7,7 @@
 "use client";
 
 import React, { useCallback, useState, useMemo } from "react";
+import Link from "next/link";
 import {
     Wallet, 
     BarChart3, 
@@ -412,7 +413,7 @@ export default function HomePage(): React.ReactElement {
   return (
     <div className="flex flex-col h-screen">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           {addedAddresses.length > 0 && (
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild className="md:hidden">
@@ -444,9 +445,22 @@ export default function HomePage(): React.ReactElement {
               </SheetContent>
             </Sheet>
           )}
-          <h1 className="text-lg font-semibold hidden md:block">
-            Staking Rewards
+          <h1 className="hidden text-lg font-semibold md:block">
+            <Link
+              href="/"
+              className="transition-colors hover:text-primary"
+            >
+              Staking Rewards
+            </Link>
           </h1>
+          <nav className="hidden items-center gap-4 text-sm font-medium text-muted-foreground md:flex">
+            <Link
+              href="/governance"
+              className="transition-colors hover:text-foreground"
+            >
+              Governance
+            </Link>
+          </nav>
         </div>
 
          <div className="flex items-center gap-2 md:gap-4">
