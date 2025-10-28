@@ -43,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const governanceVotesService = new GovernanceVotesService();
 
@@ -164,6 +165,283 @@ const DonutLegend = ({
 );
 
 const VIRTUALIZED_TABLE_ROW_HEIGHT = 56;
+
+type VoteMode = "current" | "quadratic";
+
+type HolderCategoryDefinition = {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+};
+
+type HolderCategoryStat = HolderCategoryDefinition & {
+  totalCount: number;
+  yesCount: number;
+  noCount: number;
+  totalVotePower: number;
+  yesVotePower: number;
+  noVotePower: number;
+  shareTotalVoters: number;
+  shareYesVoters: number;
+  shareNoVoters: number;
+  shareTotalPower: number;
+  shareYesPower: number;
+  shareNoPower: number;
+};
+
+const HOLDER_CATEGORIES_LIVE: HolderCategoryDefinition[] = [
+  { id: "lt10", label: "< 10 EGLD", min: 0, max: 10 },
+  { id: "10to100", label: "10 - < 100 EGLD", min: 10, max: 100 },
+  { id: "100to1000", label: "100 - < 1,000 EGLD", min: 100, max: 1000 },
+  { id: "1kto5k", label: "1,000 - < 5,000 EGLD", min: 1000, max: 5000 },
+  { id: "5kto10k", label: "5,000 - < 10,000 EGLD", min: 5000, max: 10000 },
+  { id: "10kto15k", label: "10,000 - < 15,000 EGLD", min: 10000, max: 15000 },
+  { id: "15kto25k", label: "15,000 - < 25,000 EGLD", min: 15000, max: 25000 },
+  { id: "25kto50k", label: "25,000 - < 50,000 EGLD", min: 25000, max: 50000 },
+  { id: "gte50k", label: ">= 50,000 EGLD", min: 50000, max: Number.POSITIVE_INFINITY },
+];
+
+const HOLDER_CATEGORIES_SIMULATION: HolderCategoryDefinition[] = [
+  { id: "lt10", label: "< 10 EGLD", min: 0, max: 10 },
+  { id: "10to100", label: "10 - < 100 EGLD", min: 10, max: 100 },
+  { id: "100to1000", label: "100 - < 1,000 EGLD", min: 100, max: 1000 },
+  { id: "1kto5k", label: "1,000 - < 5,000 EGLD", min: 1000, max: 5000 },
+  { id: "5kto10k", label: "5,000 - < 10,000 EGLD", min: 5000, max: 10000 },
+  { id: "gte10k", label: ">= 10,000 EGLD", min: 10000, max: Number.POSITIVE_INFINITY },
+];
+
+const getHolderCategoryDefinitions = (
+  mode: VoteMode
+): HolderCategoryDefinition[] =>
+  mode === "quadratic" ? HOLDER_CATEGORIES_SIMULATION : HOLDER_CATEGORIES_LIVE;
+
+const getCategoryByValue = (
+  value: number,
+  definitions: HolderCategoryDefinition[]
+): HolderCategoryDefinition => {
+  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+  for (const category of definitions) {
+    if (safeValue >= category.min && safeValue < category.max) {
+      return category;
+    }
+  }
+  return definitions[definitions.length - 1];
+};
+
+const computeQuadraticSimulation = (
+  data: IGovernanceVotesResponse
+): IGovernanceVotesResponse => {
+  const transformVotes = (votes: IGovernanceVoteByAddress[]) =>
+    votes.map((vote) => {
+      const basePower = Math.max(0, toNumber(vote.voteShort));
+      const quadraticPower = basePower > 0 ? Math.sqrt(basePower) : 0;
+
+      return {
+        ...vote,
+        vote: quadraticPower.toString(),
+        voteShort: quadraticPower,
+        share: 0,
+        shareTotal: 0,
+      };
+    });
+
+  const simulatedYes = transformVotes(data.orderedGovernanceVotesByAddressYes);
+  const simulatedNo = transformVotes(data.orderedGovernanceVotesByAddressNo);
+
+  const totalYesPower = simulatedYes.reduce(
+    (sum, vote) => sum + vote.voteShort,
+    0
+  );
+  const totalNoPower = simulatedNo.reduce(
+    (sum, vote) => sum + vote.voteShort,
+    0
+  );
+  const totalPower = totalYesPower + totalNoPower;
+
+  const normalizeVotes = (
+    votes: IGovernanceVoteByAddress[],
+    bucketTotal: number
+  ) =>
+    votes
+      .map((vote) => {
+        const bucketShare =
+          bucketTotal > 0 ? (vote.voteShort / bucketTotal) * 100 : 0;
+        const totalShare =
+          totalPower > 0 ? (vote.voteShort / totalPower) * 100 : 0;
+
+        return {
+          ...vote,
+          share: Number.isFinite(bucketShare) ? bucketShare : 0,
+          shareTotal: Number.isFinite(totalShare) ? totalShare : 0,
+        };
+      })
+      .sort((a, b) => b.voteShort - a.voteShort);
+
+  return {
+    orderedGovernanceVotesByAddressYes: normalizeVotes(
+      simulatedYes,
+      totalYesPower
+    ),
+    orderedGovernanceVotesByAddressNo: normalizeVotes(
+      simulatedNo,
+      totalNoPower
+    ),
+    totalVotedYes: totalYesPower,
+    totalVotedYesShort: totalYesPower,
+    totalVotedNo: totalNoPower,
+    totalVotedNoShort: totalNoPower,
+    totalVoted: totalPower,
+    totalVotedShort: totalPower,
+  };
+};
+
+const computeHolderCategories = (
+  dataset: IGovernanceVotesResponse | null,
+  definitions: HolderCategoryDefinition[],
+  { omitEmpty = false }: { omitEmpty?: boolean } = {}
+): HolderCategoryStat[] | null => {
+  if (!dataset) {
+    return null;
+  }
+
+  type CategoryAccumulator = {
+    yesPower: number;
+    noPower: number;
+    yesAddresses: Set<string>;
+    noAddresses: Set<string>;
+    allAddresses: Set<string>;
+  };
+
+  const categoryMap = new Map<string, CategoryAccumulator>();
+
+  definitions.forEach((category) => {
+    categoryMap.set(category.id, {
+      yesPower: 0,
+      noPower: 0,
+      yesAddresses: new Set<string>(),
+      noAddresses: new Set<string>(),
+      allAddresses: new Set<string>(),
+    });
+  });
+
+  const globalAddresses = new Set<string>();
+
+  const registerVote = (
+    vote: IGovernanceVoteByAddress,
+    bucket: "yes" | "no"
+  ) => {
+    const votePower = Math.max(0, toNumber(vote.voteShort));
+    const category = getCategoryByValue(votePower, definitions);
+    const accumulator = categoryMap.get(category.id);
+
+    if (!accumulator) {
+      return;
+    }
+
+    if (bucket === "yes") {
+      accumulator.yesPower += votePower;
+      accumulator.yesAddresses.add(vote.address);
+    } else {
+      accumulator.noPower += votePower;
+      accumulator.noAddresses.add(vote.address);
+    }
+
+    accumulator.allAddresses.add(vote.address);
+    globalAddresses.add(vote.address);
+  };
+
+  dataset.orderedGovernanceVotesByAddressYes.forEach((vote) =>
+    registerVote(vote, "yes")
+  );
+  dataset.orderedGovernanceVotesByAddressNo.forEach((vote) =>
+    registerVote(vote, "no")
+  );
+
+  const totalYesVoters = dataset.orderedGovernanceVotesByAddressYes.length;
+  const totalNoVoters = dataset.orderedGovernanceVotesByAddressNo.length;
+  const totalUniqueVoters = globalAddresses.size;
+
+  const totalYesPower = Math.max(0, toNumber(dataset.totalVotedYesShort));
+  const totalNoPower = Math.max(0, toNumber(dataset.totalVotedNoShort));
+  const totalPower = totalYesPower + totalNoPower;
+
+  return definitions.map((category) => {
+    const accumulator = categoryMap.get(category.id);
+
+    if (!accumulator) {
+      return {
+        ...category,
+        totalCount: 0,
+        yesCount: 0,
+        noCount: 0,
+        totalVotePower: 0,
+        yesVotePower: 0,
+        noVotePower: 0,
+        shareTotalVoters: 0,
+        shareYesVoters: 0,
+        shareNoVoters: 0,
+        shareTotalPower: 0,
+        shareYesPower: 0,
+        shareNoPower: 0,
+      };
+    }
+
+    const yesCount = accumulator.yesAddresses.size;
+    const noCount = accumulator.noAddresses.size;
+    const totalCount = accumulator.allAddresses.size;
+    const yesVotePower = accumulator.yesPower;
+    const noVotePower = accumulator.noPower;
+    const combinedPower = yesVotePower + noVotePower;
+
+    const shareTotalVoters =
+      totalUniqueVoters > 0 ? (totalCount / totalUniqueVoters) * 100 : 0;
+    const shareYesVoters =
+      totalYesVoters > 0 ? (yesCount / totalYesVoters) * 100 : 0;
+    const shareNoVoters =
+      totalNoVoters > 0 ? (noCount / totalNoVoters) * 100 : 0;
+
+    const shareTotalPower =
+      totalPower > 0 ? (combinedPower / totalPower) * 100 : 0;
+    const shareYesPower =
+      totalYesPower > 0 ? (yesVotePower / totalYesPower) * 100 : 0;
+    const shareNoPower =
+      totalNoPower > 0 ? (noVotePower / totalNoPower) * 100 : 0;
+
+    return {
+      ...category,
+      totalCount,
+      yesCount,
+      noCount,
+      totalVotePower: combinedPower,
+      yesVotePower,
+      noVotePower,
+      shareTotalVoters,
+      shareYesVoters,
+      shareNoVoters,
+      shareTotalPower,
+      shareYesPower,
+      shareNoPower,
+    };
+  }).filter((category) => (omitEmpty ? category.totalCount > 0 : true));
+};
+
+const MetricCell = ({
+  value,
+  share,
+  digits = 2,
+}: {
+  value: number;
+  share: number;
+  digits?: number;
+}) => (
+  <div className="flex flex-col items-end gap-0.5">
+    <span className="font-semibold">{formatNumeric(value, digits)}</span>
+    <span className="text-xs text-muted-foreground">
+      {formatShare(Number.isFinite(share) ? share : 0)}
+    </span>
+  </div>
+);
 
 const VirtuosoTableScroller = forwardRef<
   HTMLDivElement,
@@ -420,6 +698,7 @@ export default function GovernancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeMode, setActiveMode] = useState<VoteMode>("current");
 
   const loadVotes = useCallback(
     async ({
@@ -468,14 +747,38 @@ export default function GovernancePage() {
     void loadVotes({ isManual: true });
   }, [loadVotes]);
 
+  const quadraticData = useMemo(
+    () => (data ? computeQuadraticSimulation(data) : null),
+    [data]
+  );
+
+  useEffect(() => {
+    if (activeMode === "quadratic" && !quadraticData) {
+      setActiveMode("current");
+    }
+  }, [activeMode, quadraticData]);
+
+  const activeDataset = useMemo(() => {
+    if (activeMode === "quadratic") {
+      return quadraticData ?? data;
+    }
+    return data;
+  }, [activeMode, quadraticData, data]);
+
+  const isQuadraticMode = activeMode === "quadratic";
+
+  const handleModeChange = useCallback((value: string) => {
+    setActiveMode(value === "quadratic" ? "quadratic" : "current");
+  }, []);
+
   const aggregateStats = useMemo(() => {
-    if (!data) {
+    if (!activeDataset) {
       return null;
     }
 
-    const total = Number.parseFloat(String(data.totalVotedShort));
-    const yes = Number.parseFloat(String(data.totalVotedYesShort));
-    const no = Number.parseFloat(String(data.totalVotedNoShort));
+    const total = toNumber(activeDataset.totalVotedShort);
+    const yes = Math.max(0, toNumber(activeDataset.totalVotedYesShort));
+    const no = Math.max(0, toNumber(activeDataset.totalVotedNoShort));
 
     const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
     const safeYes = Number.isFinite(yes) ? yes : 0;
@@ -484,29 +787,29 @@ export default function GovernancePage() {
     return {
       total: {
         label: "Total Participation",
-        value: data.totalVotedShort,
+        value: activeDataset.totalVotedShort,
         share: 1,
       },
       yes: {
         label: "Support (YES)",
-        value: data.totalVotedYesShort,
+        value: activeDataset.totalVotedYesShort,
         share: safeTotal > 0 ? safeYes / safeTotal : 0,
       },
       no: {
         label: "Against (NO)",
-        value: data.totalVotedNoShort,
+        value: activeDataset.totalVotedNoShort,
         share: safeTotal > 0 ? safeNo / safeTotal : 0,
       },
     };
-  }, [data]);
+  }, [activeDataset]);
 
-const insights = useMemo(() => {
-  if (!data) {
-    return null;
-  }
+  const insights = useMemo(() => {
+    if (!activeDataset) {
+      return null;
+    }
 
-    const yesVotes = data.orderedGovernanceVotesByAddressYes;
-    const noVotes = data.orderedGovernanceVotesByAddressNo;
+    const yesVotes = activeDataset.orderedGovernanceVotesByAddressYes;
+    const noVotes = activeDataset.orderedGovernanceVotesByAddressNo;
     const uniqueAddresses = new Set<string>();
 
     yesVotes.forEach((vote) => uniqueAddresses.add(vote.address));
@@ -531,7 +834,7 @@ const insights = useMemo(() => {
       yesTop5BucketShare: sumBucketShare(yesVotes, 5),
       noTop5BucketShare: sumBucketShare(noVotes, 5),
     };
-  }, [data]);
+  }, [activeDataset]);
 
   const voteSplit = useMemo(() => {
     if (!aggregateStats) {
@@ -570,6 +873,19 @@ const insights = useMemo(() => {
       topShare: top10Yes + top10No,
     };
   }, [insights]);
+
+  const holderCategoryDefinitions = useMemo(
+    () => getHolderCategoryDefinitions(activeMode),
+    [activeMode]
+  );
+
+  const holderCategories = useMemo(
+    () =>
+      computeHolderCategories(activeDataset, holderCategoryDefinitions, {
+        omitEmpty: isQuadraticMode,
+      }),
+    [activeDataset, holderCategoryDefinitions, isQuadraticMode]
+  );
 
   const showInitialLoading = isLoading && !data && !error;
 
@@ -611,13 +927,33 @@ const insights = useMemo(() => {
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 pb-10 md:px-6 md:py-8">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Governance Participation
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Monitor how stakeholders are voting across YES and NO buckets.
-              </p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Governance Participation
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Monitor how stakeholders are voting across YES and NO buckets.
+                </p>
+              </div>
+              <Tabs
+                value={activeMode}
+                onValueChange={handleModeChange}
+                className="w-full max-w-md"
+              >
+                <TabsList>
+                  <TabsTrigger value="current">Live Totals</TabsTrigger>
+                  <TabsTrigger value="quadratic" disabled={!quadraticData}>
+                    Quadratic Simulation
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {isQuadraticMode ? (
+                <p className="text-xs text-muted-foreground">
+                  Vote power is re-weighted using square-root scaling to
+                  illustrate a quadratic voting outcome.
+                </p>
+              ) : null}
             </div>
 
             {showInitialLoading && (
@@ -660,7 +996,7 @@ const insights = useMemo(() => {
               </Card>
             )}
 
-            {!showInitialLoading && data && aggregateStats && (
+            {!showInitialLoading && data && activeDataset && aggregateStats && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card>
@@ -792,6 +1128,96 @@ const insights = useMemo(() => {
                   </Card>
                 </div>
 
+                {holderCategories && holderCategories.length > 0 ? (
+                  <Card>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-base">
+                        Holder Distribution
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Voter counts and vote power share grouped by EGLD buckets
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[760px] text-sm">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="text-right">
+                                Total Wallets
+                              </TableHead>
+                              <TableHead className="text-right">
+                                YES Wallets
+                              </TableHead>
+                              <TableHead className="text-right">
+                                NO Wallets
+                              </TableHead>
+                              <TableHead className="text-right">
+                                Total Vote Power
+                              </TableHead>
+                              <TableHead className="text-right">
+                                YES Vote Power
+                              </TableHead>
+                              <TableHead className="text-right">
+                                NO Vote Power
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {holderCategories.map((category) => (
+                              <TableRow key={category.id}>
+                                <TableCell className="whitespace-nowrap font-medium">
+                                  {category.label}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.totalCount}
+                                    share={category.shareTotalVoters}
+                                    digits={0}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.yesCount}
+                                    share={category.shareYesVoters}
+                                    digits={0}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.noCount}
+                                    share={category.shareNoVoters}
+                                    digits={0}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.totalVotePower}
+                                    share={category.shareTotalPower}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.yesVotePower}
+                                    share={category.shareYesPower}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <MetricCell
+                                    value={category.noVotePower}
+                                    share={category.shareNoPower}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
                 <div className="space-y-3">
                   <div>
                     <h2 className="text-lg font-semibold">All Votes</h2>
@@ -801,24 +1227,28 @@ const insights = useMemo(() => {
                     </p>
                   </div>
                   <div className="grid gap-6 lg:grid-cols-2">
-                  <VotesTable
-                    title="All YES Voters"
-                    description="Complete list ordered by vote power contribution."
-                    icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                    votes={data.orderedGovernanceVotesByAddressYes}
-                    accentColor={YES_COLOR}
-                    virtualized
-                    virtualizedHeight={480}
-                  />
-                  <VotesTable
-                    title="All NO Voters"
-                    description="Complete list ordered by vote power contribution."
-                    icon={<XCircle className="h-5 w-5 text-rose-500" />}
-                    votes={data.orderedGovernanceVotesByAddressNo}
-                    accentColor={NO_COLOR}
-                    virtualized
-                    virtualizedHeight={480}
-                  />
+                    <VotesTable
+                      title="All YES Voters"
+                      description="Complete list ordered by vote power contribution."
+                      icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      votes={
+                        activeDataset?.orderedGovernanceVotesByAddressYes ?? []
+                      }
+                      accentColor={YES_COLOR}
+                      virtualized
+                      virtualizedHeight={480}
+                    />
+                    <VotesTable
+                      title="All NO Voters"
+                      description="Complete list ordered by vote power contribution."
+                      icon={<XCircle className="h-5 w-5 text-rose-500" />}
+                      votes={
+                        activeDataset?.orderedGovernanceVotesByAddressNo ?? []
+                      }
+                      accentColor={NO_COLOR}
+                      virtualized
+                      virtualizedHeight={480}
+                    />
                   </div>
                 </div>
               </div>
