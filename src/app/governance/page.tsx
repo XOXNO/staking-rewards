@@ -89,6 +89,7 @@ interface DonutSegment {
   name: string;
   value: number;
   color: string;
+  [key: string]: string | number;
 }
 
 const DonutChart = ({

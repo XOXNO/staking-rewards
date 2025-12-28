@@ -4,14 +4,22 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { TooltipProps } from 'recharts';
 import { shortenAddress } from '@/lib/utils/formatters';
-import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { CurrencyMode } from '@/components/dashboard/ChartToggles';
 
-interface IChartTooltipContentProps extends TooltipProps<ValueType, NameType> {
+interface IChartTooltipContentProps {
+  active?: boolean;
+  payload?: Array<{
+    name?: string;
+    value?: number | string;
+    dataKey?: string | number;
+    color?: string;
+  }>;
+  label?: string | number;
   walletColorMap: Record<string, string>;
   currencyMode?: CurrencyMode;
+  coordinate?: { x?: number; y?: number };
+  viewBox?: { width?: number; height?: number; x?: number; y?: number };
 }
 
 export const ChartTooltipContent: React.FC<IChartTooltipContentProps> = ({
