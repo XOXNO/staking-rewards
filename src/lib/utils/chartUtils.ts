@@ -36,15 +36,13 @@ export function calculateCumulativeData(
       epoch: epochData.epoch,
     };
 
-    // Process all wallets
+    // Process all wallets - always include all wallets for consistent data shape
     wallets.forEach(wallet => {
       const value = Number(epochData[wallet] || 0);
       // Update running total regardless of value
       walletRunningTotals[wallet] += value;
-      // Add to result if it has a value
-      if (walletRunningTotals[wallet] > 0) {
-        cumulativeEntry[wallet] = optimizeNumber(walletRunningTotals[wallet]);
-      }
+      // Always include wallet in result for consistent chart data shape
+      cumulativeEntry[wallet] = optimizeNumber(walletRunningTotals[wallet]);
     });
 
     return cumulativeEntry;
@@ -102,37 +100,31 @@ export function precalculateEpochSums(
   wallets: string[]
 ): Array<{ epoch: number; [wallet: string]: number | string; _total: number }> {
   const result = data.map(epochData => {
-    // Calculate first the total
+    // Calculate the total and include all wallets for consistent data shape
     let totalForEpoch = 0;
-    const epochEntries: [string, number][] = [];
-    
-    // Collect wallets with non-zero values
-    wallets.forEach(wallet => {
-      const value = Number(epochData[wallet] || 0);
-      if (value !== 0) {
-        epochEntries.push([wallet, optimizeNumber(value)]);
-        totalForEpoch += value;
-      }
-    });
-    
+
     // Build the final object with the correct type
-    const resultEntry: { 
-      epoch: number; 
+    const resultEntry: {
+      epoch: number;
       _total: number;
       [wallet: string]: number | string;
     } = {
       epoch: epochData.epoch,
-      _total: optimizeNumber(totalForEpoch)
+      _total: 0 // Will be updated below
     };
-    
-    // Add non-zero wallets
-    epochEntries.forEach(([wallet, value]) => {
-      resultEntry[wallet] = value;
+
+    // Include all wallets for consistent chart data shape
+    wallets.forEach(wallet => {
+      const value = Number(epochData[wallet] || 0);
+      resultEntry[wallet] = optimizeNumber(value);
+      totalForEpoch += value;
     });
-    
+
+    resultEntry._total = optimizeNumber(totalForEpoch);
+
     return resultEntry;
   });
-  
+
   return result;
 }
 
@@ -150,27 +142,138 @@ export function calculateYDomain(
   wallets?: string[]
 ): [number, number] {
   if (!data || data.length === 0) return [0, 1];
-  
+
   let maxY: number;
-  
+
   if ('_total' in (data[0] || {})) {
-    maxY = Math.max(...data.map(d => d._total as number));
+    // Use reduce instead of Math.max(...spread) to avoid stack overflow with large datasets
+    maxY = data.reduce((max, d) => Math.max(max, d._total as number), 0);
   } else if (wallets && wallets.length > 0) {
-    maxY = Math.max(
-      ...data.map(d => 
-        wallets.reduce((sum, w) => sum + Number(d[w] || 0), 0)
-      )
-    );
+    // Use reduce instead of Math.max(...spread) to avoid stack overflow with large datasets
+    maxY = data.reduce((max, d) => {
+      const epochTotal = wallets.reduce((sum, w) => sum + Number(d[w] || 0), 0);
+      return Math.max(max, epochTotal);
+    }, 0);
   } else {
-    maxY = Math.max(
-      ...data.map(d => 
-        Object.entries(d)
-          .filter(([key]) => key !== 'epoch')
-          .reduce((sum, [_, val]) => sum + (typeof val === 'number' ? val : 0), 0)
-      )
-    );
+    // Use reduce instead of Math.max(...spread) to avoid stack overflow with large datasets
+    maxY = data.reduce((max, d) => {
+      const epochTotal = Object.entries(d)
+        .filter(([key]) => key !== 'epoch')
+        .reduce((sum, [, val]) => sum + (typeof val === 'number' ? val : 0), 0);
+      return Math.max(max, epochTotal);
+    }, 0);
   }
-  
+
   const buffer = maxY * (displayMode === "cumulative" ? 0.1 : 0.2);
   return [0, optimizeNumber(maxY + buffer, 4)];
+}
+
+/**
+ * Reduces the number of data points for more efficient rendering
+ * @param data - The data points to reduce
+ * @param targetPoints - Target number of points (default 200)
+ * @param useLast - If true, use the last value in each chunk (for cumulative data).
+ *                  If false, use the average (for daily data).
+ */
+export function reduceDataPoints<T extends { epoch: number; [key: string]: number | string }>(
+  data: T[],
+  targetPoints: number = 200,
+  useLast: boolean = false
+): T[] {
+  if (data.length <= targetPoints) return data;
+
+  const step = Math.ceil(data.length / targetPoints);
+  const result: T[] = [];
+
+  for (let i = 0; i < data.length; i += step) {
+    const chunk = data.slice(i, i + step);
+
+    if (useLast) {
+      // For cumulative data, use the last point in the chunk (preserves running total)
+      const lastPoint = chunk[chunk.length - 1];
+      // Copy the entire last point to preserve all fields including _total
+      result.push({ ...lastPoint } as T);
+    } else {
+      // For daily data, calculate the average for each wallet
+      const aggregated: { epoch: number; [key: string]: number | string } = {
+        epoch: chunk[0].epoch,
+      };
+      chunk.forEach((point) => {
+        Object.entries(point).forEach(([key, value]) => {
+          if (key === "epoch") return;
+          if (typeof value === "number") {
+            if (!aggregated[key]) aggregated[key] = 0;
+            aggregated[key] = (aggregated[key] as number) + value / chunk.length;
+          }
+        });
+      });
+      // Optimize numbers
+      Object.entries(aggregated).forEach(([key, value]) => {
+        if (key !== "epoch" && typeof value === "number") {
+          aggregated[key] = optimizeNumber(value);
+        }
+      });
+      result.push(aggregated as T);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Aggregates epoch data by a specified granularity (number of epochs)
+ * @param data Epoch data with values by wallet
+ * @param granularity Number of epochs to aggregate (1 = no aggregation, 7 = weekly, etc.)
+ * @param wallets List of wallets to include
+ * @param isCumulative If true, use last value; if false, sum values
+ * @returns Aggregated data
+ */
+export function aggregateByGranularity<T extends { epoch: number; [key: string]: number | string }>(
+  data: T[],
+  granularity: number,
+  wallets: string[],
+  isCumulative: boolean = false
+): T[] {
+  if (data.length === 0) return [];
+  if (granularity === 1) return [...data]; // Return new array reference
+
+  // Sort by epoch ascending
+  const sorted = [...data].sort((a, b) => a.epoch - b.epoch);
+  const result: T[] = [];
+
+  for (let i = 0; i < sorted.length; i += granularity) {
+    const chunk = sorted.slice(i, Math.min(i + granularity, sorted.length));
+
+    if (isCumulative) {
+      // For cumulative, take the last value in the chunk
+      result.push({ ...chunk[chunk.length - 1] } as T);
+    } else {
+      // For daily, sum values across the chunk
+      const aggregated: { epoch: number; [key: string]: number | string } = {
+        epoch: chunk[0].epoch, // Use first epoch as the label
+      };
+
+      // Sum all wallet values
+      wallets.forEach(wallet => {
+        let sum = 0;
+        chunk.forEach(point => {
+          sum += Number(point[wallet] || 0);
+        });
+        aggregated[wallet] = optimizeNumber(sum);
+      });
+
+      // Calculate _total if present
+      if ('_total' in chunk[0]) {
+        let totalSum = 0;
+        chunk.forEach(point => {
+          totalSum += Number((point as { _total?: number })._total || 0);
+        });
+        aggregated._total = optimizeNumber(totalSum);
+      }
+
+      result.push(aggregated as T);
+    }
+  }
+
+  return result;
 } 

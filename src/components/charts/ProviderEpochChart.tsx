@@ -6,7 +6,8 @@
 
 "use client";
 
-import React, { useMemo, useCallback, useEffect, useState } from "react";
+import React, { useMemo, useCallback, useRef } from "react";
+import { useContainerDimensions } from "@/hooks/useContainerDimensions";
 import {
   BarChart,
   Bar,
@@ -15,10 +16,8 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
 } from "recharts";
 import {
-  ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart"; // Use shadcn chart components
 import { cn } from "@/lib/utils/cn";
@@ -30,9 +29,10 @@ import {
   calculateCumulativeData,
   precalculateEpochSums,
   calculateYDomain,
+  aggregateByGranularity,
 } from "@/lib/utils/chartUtils";
 import { useStaking } from "@/lib/context/StakingContext";
-import { DisplayMode, CurrencyMode } from "@/components/dashboard/ChartToggles";
+import { CurrencyMode } from "@/components/dashboard/ChartToggles";
 
 /**
  * Format of a data entry for the epoch chart by wallet.
@@ -50,51 +50,10 @@ interface IProviderEpochChartProps {
   chartType: "bar" | "line";
   displayMode: "daily" | "cumulative";
   currencyMode: CurrencyMode;
+  granularity?: number;
+  walletColorMap?: Record<string, string>;
   className?: string;
   viewMode?: "rewards" | "staked";
-}
-
-/**
- * Reduces the number of data points for display
- * by aggregating nearby points based on container width
- */
-function reduceDataPoints(
-  data: IWalletEpochChartData[],
-  targetPoints: number = 200 // Target number of points for smooth rendering
-): IWalletEpochChartData[] {
-  if (data.length <= targetPoints) return data;
-
-  const step = Math.max(1, Math.floor(data.length / targetPoints));
-  const result: IWalletEpochChartData[] = [];
-
-  for (let i = 0; i < data.length; i += step) {
-    const chunk = data.slice(i, i + step);
-    const aggregated: IWalletEpochChartData = {
-      epoch: chunk[0].epoch, // Keep the first epoch of the group
-    };
-
-    // Calculate the average for each wallet on this group of points
-    chunk.forEach((point) => {
-      Object.entries(point).forEach(([key, value]) => {
-        if (key === "epoch") return;
-        if (typeof value === "number") {
-          if (!aggregated[key]) aggregated[key] = 0;
-          aggregated[key] = (aggregated[key] as number) + value / chunk.length;
-        }
-      });
-    });
-
-    // Optimize numbers
-    Object.entries(aggregated).forEach(([key, value]) => {
-      if (key !== "epoch" && typeof value === "number") {
-        aggregated[key] = Number(value.toFixed(6));
-      }
-    });
-
-    result.push(aggregated);
-  }
-
-  return result;
 }
 
 /**
@@ -106,24 +65,21 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   chartType,
   displayMode,
   currencyMode,
+  granularity = 1,
+  walletColorMap: propWalletColorMap,
   className,
   viewMode = "rewards",
 }) => {
-  // Add a state to track displayMode changes
-  const [prevDisplayMode, setPrevDisplayMode] =
-    useState<DisplayMode>(displayMode);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerDimensions(containerRef);
 
-  // Effect to detect and handle displayMode changes
-  useEffect(() => {
-    if (prevDisplayMode !== displayMode) {
-      setPrevDisplayMode(displayMode);
-    }
-  }, [displayMode, prevDisplayMode]);
-
-  // Use context to get colors
+  // Use context to get colors as fallback
   const {
-    state: { walletColorMap },
+    state: { walletColorMap: contextWalletColorMap },
   } = useStaking();
+
+  // Prefer prop over context
+  const walletColorMap = propWalletColorMap || contextWalletColorMap;
 
   // List of wallets (stable order)
   const wallets = useMemo(() => {
@@ -152,10 +108,15 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
       : processedData;
   }, [displayMode, processedCumulativeData, processedData]);
 
-  // Reduce the number of points for display
+  // Aggregate data by granularity
   const optimizedDisplayData = useMemo(() => {
-    return reduceDataPoints(displayData);
-  }, [displayData]);
+    return aggregateByGranularity(
+      displayData,
+      granularity,
+      wallets,
+      displayMode === "cumulative"
+    );
+  }, [displayData, granularity, wallets, displayMode]);
 
   // Calculate Y-axis limits
   const yDomain = useMemo(() => {
@@ -271,45 +232,41 @@ export const ProviderEpochChart: React.FC<IProviderEpochChartProps> = ({
   }
 
   return (
-    <ChartContainer config={{}} className={cn("h-[450px] w-full", className)}>
-      <div className="w-full h-full p-2">
-        <div className="h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ChartComponent
-              accessibilityLayer
-              data={optimizedDisplayData}
-              margin={{
-                top: 10,
-                right: 10,
-                left: 5,
-                bottom: 15,
-              }}
-              barGap={chartType === "bar" ? 2 : undefined}
-            >
-              <CartesianGrid {...chartStyles.cartesianGrid} />
-              <XAxis dataKey="epoch" {...chartStyles.xAxis} />
-              <YAxis
-                {...chartStyles.yAxis}
-                tickFormatter={yTickFormatter}
-                domain={yDomain}
-              />
-              <ChartTooltip
-                content={({ active, payload }) => (
-                  <ChartTooltipWrapper
-                    active={active}
-                    payload={payload as unknown as ChartPayload[]}
-                    walletColorMap={walletColorMap}
-                    displayMode={displayMode}
-                    viewMode={viewMode}
-                    currencyMode={currencyMode}
-                  />
-                )}
-              />
-              {chartElements}
-            </ChartComponent>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </ChartContainer>
+    <div ref={containerRef} className={cn("w-full overflow-hidden", className)} style={{ minHeight: 450 }}>
+      <ChartComponent
+        key={`chart-${granularity}-${displayMode}-${chartType}-${optimizedDisplayData.length}`}
+        width={width}
+        height={450}
+        data={optimizedDisplayData}
+        margin={{
+          top: 10,
+          right: 10,
+          left: 5,
+          bottom: 15,
+        }}
+        barGap={chartType === "bar" ? 2 : undefined}
+      >
+        <CartesianGrid {...chartStyles.cartesianGrid} />
+        <XAxis dataKey="epoch" {...chartStyles.xAxis} />
+        <YAxis
+          {...chartStyles.yAxis}
+          tickFormatter={yTickFormatter}
+          domain={yDomain}
+        />
+        <ChartTooltip
+          content={({ active, payload }) => (
+            <ChartTooltipWrapper
+              active={active}
+              payload={payload as unknown as ChartPayload[]}
+              walletColorMap={walletColorMap}
+              displayMode={displayMode}
+              viewMode={viewMode}
+              currencyMode={currencyMode}
+            />
+          )}
+        />
+        {chartElements}
+      </ChartComponent>
+    </div>
   );
 };

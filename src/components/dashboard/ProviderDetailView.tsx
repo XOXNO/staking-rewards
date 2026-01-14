@@ -28,7 +28,7 @@ import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import Image from "next/image";
 import { ProviderEpochChart } from "@/components/charts";
 import { GlobalStakedChart } from "@/components/charts/GlobalStakedChart";
-import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode } from './ChartToggles';
+import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode, type GranularityMode } from './ChartToggles';
 import { getWalletColorMap } from '@/lib/utils/chartUtils';
 import { CHART_COLORS } from '@/lib/constants/chartColors';
 import { WalletDistribution } from './WalletDistribution';
@@ -65,6 +65,7 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
   const [displayMode, setDisplayMode] = useState<DisplayMode>("daily");
   const [viewMode, setViewMode] = useState<ViewMode>('rewards');
   const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('egld');
+  const [granularity, setGranularity] = useState<GranularityMode>('1');
 
   // 2. Trouver le providerIdentity - maintenant dans un useMemo
   const providerIdentity = useMemo(() => {
@@ -243,10 +244,12 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
             displayMode={displayMode}
             chartType={chartType}
             currencyMode={currencyMode}
+            granularity={granularity}
             onViewModeChange={setViewMode}
             onDisplayModeChange={setDisplayMode}
             onChartTypeChange={setChartType}
             onCurrencyModeChange={setCurrencyMode}
+            onGranularityChange={setGranularity}
           />
         </CardHeader>
         <CardContent className="flex-grow p-2">
@@ -257,6 +260,8 @@ export const ProviderDetailView: React.FC<IProviderDetailViewProps> = ({
               chartType={chartType}
               displayMode={displayMode}
               currencyMode={currencyMode}
+              granularity={parseInt(granularity, 10)}
+              walletColorMap={walletColorMap}
               viewMode="rewards"
               className="h-[450px] min-h-[450px]"
             />

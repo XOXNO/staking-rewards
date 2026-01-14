@@ -222,22 +222,29 @@ export function aggregateEpochDataByWallet(
     const ownerAddress = providerOwners[providerAddress];
 
     epochDataArray.forEach(epochData => {
-      selectedAddresses.forEach(wallet => {
-        let reward = 0;
-        if (epochData.walletAddress === wallet) {
-          reward += epochData.epochUserRewards || 0;
-        }
-        if (wallet === ownerAddress) {
-          reward += epochData.ownerRewards || 0;
-        }
-        if (reward > 0) {
-          if (!epochWalletMap.has(epochData.epoch)) {
-            epochWalletMap.set(epochData.epoch, {});
-          }
-          const walletMap = epochWalletMap.get(epochData.epoch)!;
-          walletMap[wallet] = (walletMap[wallet] || 0) + reward;
-        }
-      });
+      const { walletAddress } = epochData;
+
+      // Skip if this epoch data is not for any of the selected addresses
+      if (!selectedAddresses.includes(walletAddress)) return;
+
+      // Initialize epoch entry if needed
+      if (!epochWalletMap.has(epochData.epoch)) {
+        epochWalletMap.set(epochData.epoch, {});
+      }
+      const walletMap = epochWalletMap.get(epochData.epoch)!;
+
+      // Initialize wallet entry if needed
+      if (!walletMap[walletAddress]) {
+        walletMap[walletAddress] = 0;
+      }
+
+      // Add user rewards
+      walletMap[walletAddress] += epochData.epochUserRewards || 0;
+
+      // Add owner rewards only if this wallet is the owner
+      if (walletAddress === ownerAddress) {
+        walletMap[walletAddress] += epochData.ownerRewards || 0;
+      }
     });
   });
 
@@ -328,7 +335,7 @@ export function aggregateProviderEpochDataByWallet(
  */
 export function aggregateStakingDataByWallet(
   allProvidersData: Record<string, EpochRewardDataWithWallet[]> | undefined,
-  providerOwners: Record<string, string>,
+  _providerOwners: Record<string, string>, // Unused but kept for API compatibility
   selectedAddresses: string[]
 ): Array<{ epoch: number; [wallet: string]: number }> {
   if (!allProvidersData || selectedAddresses.length === 0) return [];

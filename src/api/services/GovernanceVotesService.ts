@@ -26,7 +26,7 @@ export type GovernanceVotesResult =
 export class GovernanceVotesService {
   constructor(
     private readonly endpoint: string = "/scripts/governance-votes",
-    private readonly baseUrl: string = "https://api.xoxno.com"
+    private readonly baseUrl: string = "https://api.xoxno.com",
   ) {}
 
   /**
@@ -93,7 +93,7 @@ export class GovernanceVotesService {
   }
 
   private isValidGovernanceVotesResponse(
-    data: unknown
+    data: unknown,
   ): data is IGovernanceVotesResponse {
     if (!data || typeof data !== "object") {
       return false;
@@ -101,9 +101,7 @@ export class GovernanceVotesService {
 
     const response = data as Partial<IGovernanceVotesResponse>;
 
-    const isVoteArray = (
-      votes: unknown
-    ): votes is IGovernanceVoteByAddress[] =>
+    const isVoteArray = (votes: unknown): votes is IGovernanceVoteByAddress[] =>
       Array.isArray(votes) &&
       votes.every(
         (vote) =>
@@ -113,7 +111,7 @@ export class GovernanceVotesService {
           typeof (vote as IGovernanceVoteByAddress).vote === "string" &&
           typeof (vote as IGovernanceVoteByAddress).voteShort === "number" &&
           typeof (vote as IGovernanceVoteByAddress).share === "number" &&
-          typeof (vote as IGovernanceVoteByAddress).shareTotal === "number"
+          typeof (vote as IGovernanceVoteByAddress).shareTotal === "number",
       );
 
     const isNumericLike = (value: unknown): value is string | number =>

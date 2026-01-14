@@ -1,0 +1,122 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "tryAgain": "Try again",
+    "reset": "Reset",
+    "refresh": "Refresh",
+    "wallets": "Wallets",
+    "providers": "Providers",
+    "viewingWallets": "Viewing {count} Wallets",
+    "wallet": "Wallet: {address}"
+  },
+  "nav": {
+    "stakingRewards": "Staking Rewards",
+    "governance": "Governance",
+    "selectProvider": "Select Provider"
+  },
+  "landing": {
+    "hero": {
+      "title": "Unified {currency} Staking Rewards Dashboard",
+      "description": "Connect multiple wallets, track aggregated rewards across all staking providers, and gain clear insights into your {currency} earnings."
+    },
+    "features": {
+      "title": "Key Features",
+      "multiWallet": {
+        "title": "Multi-Wallet Aggregation",
+        "description": "Connect all your wallets and view combined statistics and rewards history in one unified interface."
+      },
+      "providerInsights": {
+        "title": "Detailed Provider Insights",
+        "description": "Drill down into specific staking providers. See epoch-by-epoch rewards and performance metrics."
+      },
+      "visualizations": {
+        "title": "Clear Visualizations",
+        "description": "Interactive charts help you easily understand reward trends, distribution, and performance over time."
+      },
+      "blockchainData": {
+        "title": "Direct Blockchain Data",
+        "description": "Fetches reward information directly from the MultiversX blockchain via trusted API providers."
+      },
+      "globalOverview": {
+        "title": "Global Overview",
+        "description": "Get a high-level view of total rewards, average earnings, and performance across all connected wallets."
+      },
+      "cleanInterface": {
+        "title": "Simple & Clean Interface",
+        "description": "Easily navigate your staking data with a modern, intuitive, and responsive user interface."
+      }
+    }
+  },
+  "wallet": {
+    "add": "Add Wallet",
+    "remove": "Remove",
+    "select": "Select wallet",
+    "placeholder": "Enter MultiversX address (erd1...) or herotag...",
+    "manage": "Manage Wallets"
+  },
+  "dashboard": {
+    "selectWallets": "Select wallets from the bar above to view data.",
+    "noData": "No global data available for selected wallets.",
+    "loadingProvider": "Loading provider data...",
+    "noProviderData": "No data for this provider and selected wallet(s).",
+    "global": {
+      "title": "All Providers Overview",
+      "stats": {
+        "title": "Global Statistics",
+        "totalRewarded": "Total Rewarded",
+        "description": "Aggregated across selected wallets and providers.",
+        "avg7d": "7d Avg",
+        "avg30d": "30d Avg",
+        "min7d": "7d Min",
+        "max7d": "7d Max",
+        "min30d": "30d Min",
+        "max30d": "30d Max"
+      }
+    },
+    "provider": {
+      "currentlyStaked": "Currently Staked",
+      "noData": "No data found for provider {address} across the selected wallets."
+    },
+    "charts": {
+      "rewards": "Rewards",
+      "staking": "Staking",
+      "daily": "Daily",
+      "cumulative": "Cumulative",
+      "bar": "Bar",
+      "area": "Area",
+      "egld": "EGLD",
+      "usd": "USD"
+    }
+  },
+  "governance": {
+    "title": "Governance Participation",
+    "description": "Monitor how stakeholders are voting across YES and NO buckets.",
+    "modes": {
+      "live": "Live Totals",
+      "quadratic": "Quadratic Simulation"
+    },
+    "failedToLoad": "Failed to load governance data",
+    "failedToFetch": "Failed to fetch"
+  },
+  "fun": {
+    "messages": [
+      "Searching for EGLD in the multiverse...",
+      "Teaching dragons to count your rewards...",
+      "Convincing validators to share their secrets...",
+      "Bribing the blockchain elves...",
+      "Asking the staking wizards nicely...",
+      "Decrypting ancient epoch scrolls...",
+      "Summoning the spirit of Satoshi...",
+      "Consulting with the node oracles...",
+      "Feeding the hamsters powering the servers...",
+      "Negotiating with smart contracts...",
+      "Polishing your reward gems...",
+      "Counting blocks like sheep...",
+      "Herding digital cats for data...",
+      "Mining for insights in the data caves...",
+      "Brewing a fresh batch of statistics...",
+      "Waking up sleepy validators..."
+    ]
+  }
+}

@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils/cn';
 import { formatEgld } from '@/lib/utils/formatters';
 import { IGlobalStats, IAggregatedEpochData } from '@/types/dashboard'; // Assuming types exist
 import { GlobalEpochChart, GlobalStakedChart } from '@/components/charts';
-import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode } from './ChartToggles';
+import { ChartToggles, type ChartType, type DisplayMode, type ViewMode, type CurrencyMode, type GranularityMode } from './ChartToggles';
 import { WalletPercentBar } from './WalletPercentBar';
 import { FunLoadingMessages } from '@/components/ui/FunLoadingMessages';
 import { EpochStats } from '@/components/dashboard/EpochStats';
@@ -49,31 +49,32 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
     const [displayMode, setDisplayMode] = useState<DisplayMode>('daily');
     const [viewMode, setViewMode] = useState<ViewMode>('rewards');
     const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('egld');
+    const [granularity, setGranularity] = useState<GranularityMode>('1');
 
-    // Calculer les statistiques complètes pour les epochs
+    // Calculer les statistiques complètes pour les epochs (data is sorted ascending, so slice from end)
     const stats7 = useMemo<IEpochStats>(() => {
-        const recentEpochs = aggregatedEpochData.slice(0, 7);
+        const recentEpochs = aggregatedEpochData.slice(-7); // Last 7 epochs (most recent)
         if (recentEpochs.length === 0) return { min: 0, max: 0, avg: 0 };
-        
+
         const values = recentEpochs.map(e => e.totalReward);
         return {
             min: Math.min(...values),
             max: Math.max(...values),
-            avg: globalStats.avg7 || values.reduce((a, b) => a + b, 0) / values.length
+            avg: values.reduce((a, b) => a + b, 0) / values.length
         };
-    }, [aggregatedEpochData, globalStats.avg7]);
+    }, [aggregatedEpochData]);
 
     const stats30 = useMemo<IEpochStats>(() => {
-        const recentEpochs = aggregatedEpochData.slice(0, 30);
+        const recentEpochs = aggregatedEpochData.slice(-30); // Last 30 epochs (most recent)
         if (recentEpochs.length === 0) return { min: 0, max: 0, avg: 0 };
-        
+
         const values = recentEpochs.map(e => e.totalReward);
         return {
             min: Math.min(...values),
             max: Math.max(...values),
-            avg: globalStats.avg30 || values.reduce((a, b) => a + b, 0) / values.length
+            avg: values.reduce((a, b) => a + b, 0) / values.length
         };
-    }, [aggregatedEpochData, globalStats.avg30]);
+    }, [aggregatedEpochData]);
 
     // Recalculer les données d'epoch en fonction du mode de devise
     const processedEpochWalletData = useMemo(() => {
@@ -168,20 +169,24 @@ export const GlobalDashboardView: React.FC<IGlobalDashboardViewProps> = ({
                         displayMode={displayMode}
                         chartType={chartType}
                         currencyMode={currencyMode}
+                        granularity={granularity}
                         onViewModeChange={(value) => setViewMode(value)}
                         onDisplayModeChange={(value) => setDisplayMode(value)}
                         onChartTypeChange={(value) => setChartType(value)}
                         onCurrencyModeChange={(value) => setCurrencyMode(value)}
+                        onGranularityChange={(value) => setGranularity(value)}
                     />
                 </CardHeader>
                 <CardContent className="flex-grow p-2">
                     {viewMode === 'rewards' ? (
-                        <GlobalEpochChart 
+                        <GlobalEpochChart
                             aggregatedEpochData={aggregatedEpochData}
                             epochWalletData={processedEpochWalletData}
                             chartType={chartType}
                             displayMode={displayMode}
                             currencyMode={currencyMode}
+                            granularity={parseInt(granularity, 10)}
+                            walletColorMap={walletColorMap}
                             className="mt-4"
                         />
                     ) : (

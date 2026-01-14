@@ -10,16 +10,19 @@ export type ChartType = 'bar' | 'line';
 export type DisplayMode = 'daily' | 'cumulative';
 export type ViewMode = 'rewards' | 'staked';
 export type CurrencyMode = 'egld' | 'usd';
+export type GranularityMode = '1' | '7' | '14' | '30';
 
 interface ChartTogglesProps {
     viewMode: ViewMode;
     displayMode: DisplayMode;
     chartType: ChartType;
     currencyMode: CurrencyMode;
+    granularity: GranularityMode;
     onViewModeChange: (value: ViewMode) => void;
     onDisplayModeChange: (value: DisplayMode) => void;
     onChartTypeChange: (value: ChartType) => void;
     onCurrencyModeChange: (value: CurrencyMode) => void;
+    onGranularityChange: (value: GranularityMode) => void;
 }
 
 export const ChartToggles: React.FC<ChartTogglesProps> = ({
@@ -27,17 +30,24 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
     displayMode,
     chartType,
     currencyMode,
+    granularity,
     onViewModeChange,
     onDisplayModeChange,
     onChartTypeChange,
     onCurrencyModeChange,
+    onGranularityChange,
 }) => {
     const isMobile = useIsMobile();
-    
-    // Handler pour le changement de displayMode avec log
+
     const handleDisplayModeChange = (value: DisplayMode) => {
         if (value && value !== displayMode) {
             onDisplayModeChange(value);
+        }
+    };
+
+    const handleGranularityChange = (value: GranularityMode) => {
+        if (value && value !== granularity) {
+            onGranularityChange(value);
         }
     };
 
@@ -161,6 +171,66 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
                             </Tooltip>
                         </ToggleGroup>
 
+                        {/* Granularity Toggle */}
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            value={granularity}
+                            onValueChange={handleGranularityChange}
+                            size={isMobile ? "default" : "sm"}
+                            aria-label="Granularity"
+                            className={cn(isMobile && "shadow-sm")}
+                        >
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <ToggleGroupItem
+                                        value="1"
+                                        aria-label="1 epoch"
+                                        className={cn(isMobile && "h-10 px-2")}
+                                    >
+                                        <span className={cn("text-xs font-medium", isMobile && "text-sm")}>1E</span>
+                                    </ToggleGroupItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">1 epoch per bar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <ToggleGroupItem
+                                        value="7"
+                                        aria-label="7 days"
+                                        className={cn(isMobile && "h-10 px-2")}
+                                    >
+                                        <span className={cn("text-xs font-medium", isMobile && "text-sm")}>7D</span>
+                                    </ToggleGroupItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">Aggregate 7 epochs</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <ToggleGroupItem
+                                        value="14"
+                                        aria-label="14 days"
+                                        className={cn(isMobile && "h-10 px-2")}
+                                    >
+                                        <span className={cn("text-xs font-medium", isMobile && "text-sm")}>14D</span>
+                                    </ToggleGroupItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">Aggregate 14 epochs</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <ToggleGroupItem
+                                        value="30"
+                                        aria-label="30 days"
+                                        className={cn(isMobile && "h-10 px-2")}
+                                    >
+                                        <span className={cn("text-xs font-medium", isMobile && "text-sm")}>30D</span>
+                                    </ToggleGroupItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">Aggregate 30 epochs</TooltipContent>
+                            </Tooltip>
+                        </ToggleGroup>
+
                         <ToggleGroup
                             type="single"
                             variant="outline"
@@ -172,8 +242,8 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
                         >
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <ToggleGroupItem 
-                                        value="bar" 
+                                    <ToggleGroupItem
+                                        value="bar"
                                         aria-label="Bar chart"
                                         className={cn(isMobile && "h-10 w-10")}
                                     >
@@ -184,8 +254,8 @@ export const ChartToggles: React.FC<ChartTogglesProps> = ({
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <ToggleGroupItem 
-                                        value="line" 
+                                    <ToggleGroupItem
+                                        value="line"
                                         aria-label="Line chart"
                                         className={cn(isMobile && "h-10 w-10")}
                                     >

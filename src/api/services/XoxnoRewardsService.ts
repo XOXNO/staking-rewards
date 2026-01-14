@@ -15,7 +15,7 @@ export type XoxnoApiError = {
 };
 
 // Define a result type for better error handling
-export type XoxnoRewardsResult = 
+export type XoxnoRewardsResult =
   | { success: true; data: IXoxnoUserRewardsResponse }
   | { success: false; error: XoxnoApiError };
 
@@ -35,7 +35,7 @@ export class XoxnoRewardsService {
       const response = await fetch(url, {
         method: "GET",
         headers: {
-          "Accept": "application/json",
+          Accept: "application/json",
           // Add any other required headers here, like API keys if needed
         },
         // Consider adding a timeout mechanism if fetch doesn't support it directly
@@ -46,7 +46,7 @@ export class XoxnoRewardsService {
         let errorDetails: unknown;
         try {
           errorDetails = await response.json();
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (parseError) {
           errorDetails = await response.text(); // Fallback to text if JSON parsing fails
         }
@@ -81,14 +81,16 @@ export class XoxnoRewardsService {
         // Type assertion after validation ensures data matches the interface
         data: data as IXoxnoUserRewardsResponse,
       };
-
     } catch (error) {
       // Handle network errors or other fetch-related issues
       return {
         success: false,
         error: {
           kind: "network",
-          message: error instanceof Error ? error.message : "An unknown network error occurred",
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown network error occurred",
           details: error,
         },
       };
@@ -102,14 +104,16 @@ export class XoxnoRewardsService {
    * @param data - The data received from the API.
    * @returns True if the data structure seems valid, false otherwise.
    */
-  private isValidRewardsResponse(data: unknown): data is IXoxnoUserRewardsResponse {
-    if (typeof data !== 'object' || data === null) return false;
+  private isValidRewardsResponse(
+    data: unknown,
+  ): data is IXoxnoUserRewardsResponse {
+    if (typeof data !== "object" || data === null) return false;
     const response = data as Partial<IXoxnoUserRewardsResponse>; // Use Partial for safer checking
     return (
-      typeof response.providersFullRewardsData === 'object' &&
+      typeof response.providersFullRewardsData === "object" &&
       response.providersFullRewardsData !== null &&
-      typeof response.totalRewards === 'number' &&
-      typeof response.totalRewardsPerProvider === 'object' &&
+      typeof response.totalRewards === "number" &&
+      typeof response.totalRewardsPerProvider === "object" &&
       response.totalRewardsPerProvider !== null &&
       Array.isArray(response.providersWithIdentityInfo)
       // Add more checks here if needed, e.g., check array elements
@@ -118,4 +122,4 @@ export class XoxnoRewardsService {
 }
 
 // Optional: Export an instance for easy use
-// export const xoxnoRewardsService = new XoxnoRewardsService(); 
+// export const xoxnoRewardsService = new XoxnoRewardsService();

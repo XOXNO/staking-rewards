@@ -6,17 +6,16 @@
 
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
+import { useContainerDimensions } from "@/hooks/useContainerDimensions";
 import {
   AreaChart,
   Area,
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
 import { cn } from "@/lib/utils/cn";
 import { formatEgld, shortenAddress } from "@/lib/utils/formatters";
 import { useStaking } from "@/lib/context/StakingContext/StakingContext";
@@ -37,10 +36,12 @@ interface IGlobalStakedChartProps {
  */
 export const GlobalStakedChart: React.FC<IGlobalStakedChartProps> = ({
   stakingData,
-  walletColorMap: propWalletColorMap, // Renommé pour éviter la confusion
+  walletColorMap: propWalletColorMap,
   className,
 }) => {
-  // Récupérer les couleurs depuis le contexte
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerDimensions(containerRef);
+
   const {
     state: { walletColorMap: contextWalletColorMap },
   } = useStaking();
@@ -74,128 +75,121 @@ export const GlobalStakedChart: React.FC<IGlobalStakedChartProps> = ({
   const yDomain: [number, number] = [0, maxY + buffer];
 
   return (
-    <ChartContainer config={{}} className={cn("h-[450px] w-full", className)}>
-      <div className="w-full h-full p-2">
-        <div className="h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={stakingData}
-              margin={{
-                top: 10,
-                right: 10,
-                left: 5,
-                bottom: 15,
-              }}
-            >
-              <CartesianGrid
-                vertical={false}
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border) / 0.5)"
-              />
-              <XAxis
-                dataKey="epoch"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                fontSize={10}
-                minTickGap={80}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                fontSize={10}
-                domain={yDomain}
-                tickFormatter={(value) => formatEgld(value)}
-                allowDecimals={true}
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload) return null;
+    <div ref={containerRef} className={cn("w-full overflow-hidden", className)} style={{ minHeight: 450 }}>
+      <AreaChart
+        width={width}
+        height={450}
+        data={stakingData}
+        margin={{
+          top: 10,
+          right: 10,
+          left: 5,
+          bottom: 15,
+        }}
+      >
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="3 3"
+          stroke="hsl(var(--border) / 0.5)"
+        />
+        <XAxis
+          dataKey="epoch"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={10}
+          minTickGap={80}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={10}
+          domain={yDomain}
+          tickFormatter={(value) => formatEgld(value)}
+          allowDecimals={true}
+        />
+        <Tooltip
+          content={({ active, payload, label }) => {
+            if (!active || !payload) return null;
 
-                  // Calculer le total staké à cet epoch
-                  const total = payload.reduce((sum, entry) => {
-                    return sum + ((entry.value as number) || 0);
-                  }, 0);
+            const total = payload.reduce((sum, entry) => {
+              return sum + ((entry.value as number) || 0);
+            }, 0);
 
-                  // Calculer la date à partir de l'epoch (24 heures par epoch)
-                  const epochStartDate = new Date("2020-07-30T15:00:00Z");
-                  const epochDuration = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
-                  const epochDate = new Date(
-                    epochStartDate.getTime() + Number(label) * epochDuration
-                  );
-                  const formattedDate = epochDate.toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                  });
+            const epochStartDate = new Date("2020-07-30T15:00:00Z");
+            const epochDuration = 24 * 60 * 60 * 1000;
+            const epochDate = new Date(
+              epochStartDate.getTime() + Number(label) * epochDuration
+            );
+            const formattedDate = epochDate.toLocaleDateString("fr-FR", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "2-digit",
+            });
 
-                  return (
-                    <div className="bg-background border border-border rounded-lg shadow-lg p-3">
-                      <div className="font-semibold mb-2 border-b border-border pb-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span>Epoch {label}</span>
-                            <span className="text-sm text-muted-foreground">
-                              ({formattedDate})
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span>Total Staked:</span>
-                          <span className="font-bold text-foreground">
-                            {formatEgld(total)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        {payload.map((entry) => {
-                          const wallet = entry.dataKey as string;
-                          const color = walletColorMap[wallet];
-                          const value = entry.value as number;
-                          const percentage = ((value / total) * 100).toFixed(1);
-                          return (
-                            <div
-                              key={wallet}
-                              className="flex items-center gap-2"
-                            >
-                              <span
-                                className="w-2.5 h-2.5 rounded-full"
-                                style={{ backgroundColor: color }}
-                              />
-                              <span className="font-medium" style={{ color }}>
-                                {formatEgld(value)}
-                              </span>
-                              <span className="text-muted-foreground text-sm">
-                                ({shortenAddress(wallet)} - {percentage}%)
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+            return (
+              <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+                <div className="font-semibold mb-2 border-b border-border pb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span>Epoch {label}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({formattedDate})
+                      </span>
                     </div>
-                  );
-                }}
-              />
-              {/* Afficher une aire empilée pour chaque wallet */}
-              {wallets.map((wallet) => (
-                <Area
-                  key={wallet}
-                  type="monotone"
-                  dataKey={wallet}
-                  stackId="a"
-                  stroke={walletColorMap[wallet]}
-                  fill={walletColorMap[wallet]}
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </ChartContainer>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>Total Staked:</span>
+                    <span className="font-bold text-foreground">
+                      {formatEgld(total)}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {payload.map((entry) => {
+                    const wallet = entry.dataKey as string;
+                    const color = walletColorMap[wallet];
+                    const value = entry.value as number;
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return (
+                      <div
+                        key={wallet}
+                        className="flex items-center gap-2"
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span className="font-medium" style={{ color }}>
+                          {formatEgld(value)}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          ({shortenAddress(wallet)} - {percentage}%)
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }}
+        />
+        {wallets.map((wallet) => (
+          <Area
+            key={wallet}
+            type="monotone"
+            dataKey={wallet}
+            stackId="a"
+            stroke={walletColorMap[wallet]}
+            fill={walletColorMap[wallet]}
+            fillOpacity={0.2}
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+          />
+        ))}
+      </AreaChart>
+    </div>
   );
 };
